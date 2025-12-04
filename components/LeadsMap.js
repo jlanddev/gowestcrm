@@ -169,6 +169,54 @@ export default function LeadsMap({ leads = [], onSelectLead, onGoToBackend }) {
     return true;
   });
 
+  // Calculate centroid from boundary polygon
+  const getCentroid = (boundary) => {
+    try {
+      const coords = typeof boundary === 'string' ? JSON.parse(boundary) : boundary;
+      if (coords?.coordinates?.[0]) {
+        const ring = coords.coordinates[0];
+        let sumLng = 0, sumLat = 0;
+        ring.forEach(coord => {
+          sumLng += coord[0];
+          sumLat += coord[1];
+        });
+        return { lng: sumLng / ring.length, lat: sumLat / ring.length };
+      }
+    } catch (e) {}
+    return null;
+  };
+
+  // Convert boundary to SVG points for thumbnail
+  const getBoundarySvgPoints = (boundary) => {
+    try {
+      const coords = typeof boundary === 'string' ? JSON.parse(boundary) : boundary;
+      if (coords?.coordinates?.[0]) {
+        const ring = coords.coordinates[0];
+        // Find bounds
+        let minLng = Infinity, maxLng = -Infinity, minLat = Infinity, maxLat = -Infinity;
+        ring.forEach(([lng, lat]) => {
+          minLng = Math.min(minLng, lng);
+          maxLng = Math.max(maxLng, lng);
+          minLat = Math.min(minLat, lat);
+          maxLat = Math.max(maxLat, lat);
+        });
+        // Normalize to SVG viewBox (100x70 with padding)
+        const padding = 5;
+        const width = 90;
+        const height = 60;
+        const lngRange = maxLng - minLng || 1;
+        const latRange = maxLat - minLat || 1;
+        const points = ring.map(([lng, lat]) => {
+          const x = padding + ((lng - minLng) / lngRange) * width;
+          const y = padding + ((maxLat - lat) / latRange) * height; // Flip Y
+          return `${x},${y}`;
+        }).join(' ');
+        return points;
+      }
+    } catch (e) {}
+    return null;
+  };
+
   // Add markers
   useEffect(() => {
     if (!map.current || !mapLoaded) return;
@@ -179,7 +227,16 @@ export default function LeadsMap({ leads = [], onSelectLead, onGoToBackend }) {
     const leadsWithCoords = filteredLeads.filter(lead => lead.lat && lead.lng);
 
     leadsWithCoords.forEach(lead => {
-      const color = PIPELINE_COLORS[lead.pipeline] || '#666';
+      // Use centroid from boundary if available, otherwise use lat/lng
+      let markerLat = lead.lat;
+      let markerLng = lead.lng;
+      if (lead.boundary) {
+        const centroid = getCentroid(lead.boundary);
+        if (centroid) {
+          markerLat = centroid.lat;
+          markerLng = centroid.lng;
+        }
+      }
 
       const el = document.createElement('div');
       el.className = 'lead-marker';
@@ -211,7 +268,7 @@ export default function LeadsMap({ leads = [], onSelectLead, onGoToBackend }) {
       });
 
       const marker = new mapboxgl.Marker(el)
-        .setLngLat([lead.lng, lead.lat])
+        .setLngLat([markerLng, markerLat])
         .addTo(map.current);
 
       el.addEventListener('click', () => {
@@ -219,7 +276,7 @@ export default function LeadsMap({ leads = [], onSelectLead, onGoToBackend }) {
         if (onSelectLead) onSelectLead(lead);
 
         map.current.flyTo({
-          center: [lead.lng, lead.lat],
+          center: [markerLng, markerLat],
           zoom: 15,
           duration: 1000,
         });
@@ -430,11 +487,11 @@ export default function LeadsMap({ leads = [], onSelectLead, onGoToBackend }) {
 
                   {/* Parcel Thumbnail */}
                   <div className="w-20 h-14 rounded overflow-hidden flex-shrink-0 bg-slate-900 border border-slate-700 flex items-center justify-center">
-                    {lead.boundary ? (
-                      <svg viewBox="0 0 100 70" className="w-full h-full p-1">
+                    {lead.boundary && getBoundarySvgPoints(lead.boundary) ? (
+                      <svg viewBox="0 0 100 70" className="w-full h-full">
                         <polygon
-                          points="15,55 25,15 75,10 85,50 70,60 15,55"
-                          fill="rgba(255,0,0,0.1)"
+                          points={getBoundarySvgPoints(lead.boundary)}
+                          fill="rgba(255,0,0,0.15)"
                           stroke="#FF0000"
                           strokeWidth="2"
                         />
