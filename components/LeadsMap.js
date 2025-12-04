@@ -70,11 +70,24 @@ export default function LeadsMap({ leads = [], onSelectLead, onGoToBackend, onLe
   // Update lead stage in database
   const updateLeadStage = async (leadId, newStage, e) => {
     e.stopPropagation();
-    const { error } = await supabase
-      .from('leads')
-      .update({ stage: newStage })
-      .eq('id', leadId);
-    if (!error && onLeadUpdate) onLeadUpdate();
+    try {
+      const { error } = await supabase
+        .from('leads')
+        .update({ stage: newStage })
+        .eq('id', leadId);
+
+      if (error) {
+        console.error('Error updating stage:', error);
+        return;
+      }
+
+      // Refresh data after successful update
+      if (onLeadUpdate) {
+        onLeadUpdate();
+      }
+    } catch (err) {
+      console.error('Error:', err);
+    }
   };
 
   // Initialize map
@@ -352,7 +365,7 @@ export default function LeadsMap({ leads = [], onSelectLead, onGoToBackend, onLe
       leadsWithCoords.forEach(lead => bounds.extend([lead.lng, lead.lat]));
       map.current.fitBounds(bounds, { padding: 50, maxZoom: 12 });
     }
-  }, [filteredLeads, mapLoaded, onSelectLead]);
+  }, [filteredLeads, mapLoaded]);
 
   const showParcelBoundary = (lead) => {
     if (!map.current || !mapLoaded || !lead.lat || !lead.lng) return;
