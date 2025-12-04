@@ -104,8 +104,8 @@ export default function BackendPage() {
       {/* Left Sidebar */}
       <div className="w-64 bg-slate-800 border-r border-slate-700 flex flex-col">
         {/* Logo */}
-        <div className="p-4 border-b border-slate-700">
-          <img src="/logo.svg" alt="GoWest" className="h-10" />
+        <div className="p-6 border-b border-slate-700">
+          <img src="/logo.svg" alt="GoWest" className="h-20 w-auto" />
         </div>
 
         {/* Navigation */}
