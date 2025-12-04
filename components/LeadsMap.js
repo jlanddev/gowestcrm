@@ -38,11 +38,11 @@ const getSatelliteThumbnail = (lat, lng, boundary = null) => {
         geometry: geom
       };
       const encodedGeojson = encodeURIComponent(JSON.stringify(geojson));
-      return `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/geojson(${encodedGeojson})/auto/80x60@2x?logo=false&attribution=false&access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`;
+      return `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/geojson(${encodedGeojson})/auto/80x60@2x?padding=10&logo=false&attribution=false&access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`;
     } catch (e) {}
   }
 
-  return `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/${lng},${lat},15,0/80x60@2x?logo=false&attribution=false&access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`;
+  return `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/${lng},${lat},15,0/80x60@2x?padding=10&logo=false&attribution=false&access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`;
 };
 
 export default function LeadsMap({ leads = [], onSelectLead, onGoToBackend }) {
@@ -303,29 +303,35 @@ export default function LeadsMap({ leads = [], onSelectLead, onGoToBackend }) {
     });
 
     // Load ALL parcel boundaries on map load
-    const parcelFeatures = filteredLeads
-      .filter(lead => lead.boundary)
-      .map(lead => {
-        try {
-          const geometry = typeof lead.boundary === 'string' ? JSON.parse(lead.boundary) : lead.boundary;
-          return {
-            type: 'Feature',
-            properties: { leadId: lead.id },
-            geometry
-          };
-        } catch (e) {
-          return null;
-        }
-      })
-      .filter(f => f !== null);
+    const loadParcels = () => {
+      const parcelFeatures = filteredLeads
+        .filter(lead => lead.boundary)
+        .map(lead => {
+          try {
+            const geometry = typeof lead.boundary === 'string' ? JSON.parse(lead.boundary) : lead.boundary;
+            return {
+              type: 'Feature',
+              properties: { leadId: lead.id },
+              geometry
+            };
+          } catch (e) {
+            return null;
+          }
+        })
+        .filter(f => f !== null);
 
-    const source = map.current.getSource('parcels');
-    if (source) {
-      source.setData({
-        type: 'FeatureCollection',
-        features: parcelFeatures
-      });
-    }
+      const source = map.current.getSource('parcels');
+      if (source) {
+        source.setData({
+          type: 'FeatureCollection',
+          features: parcelFeatures
+        });
+      } else {
+        // Retry after map loads
+        setTimeout(loadParcels, 500);
+      }
+    };
+    loadParcels();
 
     if (leadsWithCoords.length > 0) {
       const bounds = new mapboxgl.LngLatBounds();
