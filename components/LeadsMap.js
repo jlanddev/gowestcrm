@@ -541,16 +541,21 @@ export default function LeadsMap({ leads = [], onSelectLead, onGoToBackend, onLe
                       {lead.acreage > 0 && (
                         <span className="text-rust text-sm font-medium">{lead.acreage} ac</span>
                       )}
-                      <select
-                        value={lead.stage}
-                        onChange={(e) => updateLeadStage(lead.id, e.target.value, e)}
-                        onClick={(e) => e.stopPropagation()}
-                        className="bg-slate-700 text-white/70 text-xs px-2 py-1 rounded border-none outline-none cursor-pointer"
-                      >
-                        {STATUS_OPTIONS.map(status => (
-                          <option key={status} value={status}>{status}</option>
-                        ))}
-                      </select>
+                      <div className="relative">
+                        <select
+                          value={lead.stage}
+                          onChange={(e) => updateLeadStage(lead.id, e.target.value, e)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="appearance-none bg-gradient-to-r from-slate-700 to-slate-600 text-white text-xs font-medium pl-3 pr-7 py-1.5 rounded-full border border-slate-500/50 shadow-sm cursor-pointer hover:from-slate-600 hover:to-slate-500 transition-all focus:outline-none focus:ring-2 focus:ring-rust/50"
+                        >
+                          {STATUS_OPTIONS.map(status => (
+                            <option key={status} value={status} className="bg-slate-800">{status}</option>
+                          ))}
+                        </select>
+                        <svg className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-white/60 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </div>
                     </div>
                   </div>
 
