@@ -1,0 +1,32 @@
+{
+  "name": "gowest-crm",
+  "version": "1.0.0",
+  "description": "GoWest Lands Internal CRM",
+  "main": "index.js",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@mapbox/mapbox-gl-draw": "^1.5.1",
+    "@supabase/auth-helpers-nextjs": "^0.10.0",
+    "@supabase/supabase-js": "^2.81.1",
+    "@turf/area": "^7.2.0",
+    "mapbox-gl": "^3.16.0",
+    "next": "^16.0.1",
+    "papaparse": "^5.4.1",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-map-gl": "^8.1.0",
+    "tailwindcss": "^3.4.18"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.6"
+  }
+}

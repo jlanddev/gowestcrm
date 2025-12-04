@@ -1,0 +1,27 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-gray-100;
+}
+
+/* GoWest brand styles */
+.btn-primary {
+  @apply bg-navy hover:bg-rust text-white px-6 py-3 rounded-lg font-medium transition-colors;
+}
+
+.btn-secondary {
+  @apply bg-white border border-navy text-navy hover:bg-navy hover:text-white px-6 py-3 rounded-lg font-medium transition-colors;
+}
+
+.card {
+  @apply bg-white rounded-xl shadow-sm border border-gray-200;
+}
+
+/* Pipeline colors */
+.pipeline-jv { @apply border-l-4 border-purple-500; }
+.pipeline-development { @apply border-l-4 border-blue-500; }
+.pipeline-listing { @apply border-l-4 border-green-500; }
+.pipeline-capital { @apply border-l-4 border-yellow-500; }
+.pipeline-dispo { @apply border-l-4 border-red-500; }
