@@ -60,9 +60,9 @@ export default function LoginPage() {
           <img
             src="/logo.svg"
             alt="GoWest Lands"
-            className="h-16 mx-auto mb-4"
+            className="h-20 mx-auto mb-6"
           />
-          <h1 className="text-white text-2xl font-display tracking-wide">INTERNAL CRM</h1>
+          <h1 className="text-white/80 text-sm font-medium tracking-widest uppercase">Internal CRM</h1>
         </div>
 
         {/* Login Form */}
