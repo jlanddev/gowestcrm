@@ -24,10 +24,25 @@ const PIPELINE_NAMES = {
 
 const STAGES = ['New', 'Contacted', 'Qualified', 'Negotiating', 'Under Contract', 'Closed', 'Lost'];
 
-// Get satellite thumbnail URL for a lead
-const getSatelliteThumbnail = (lat, lng, zoom = 15) => {
+// Get satellite thumbnail URL with parcel boundary overlay
+const getSatelliteThumbnail = (lat, lng, boundary = null) => {
   if (!lat || !lng) return null;
-  return `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/${lng},${lat},${zoom},0/120x80@2x?access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`;
+
+  // If boundary exists, use GeoJSON overlay
+  if (boundary) {
+    try {
+      const geom = typeof boundary === 'string' ? JSON.parse(boundary) : boundary;
+      const geojson = {
+        type: 'Feature',
+        properties: { stroke: '#FF0000', 'stroke-width': 3, 'stroke-opacity': 1, fill: '#FF0000', 'fill-opacity': 0.2 },
+        geometry: geom
+      };
+      const encodedGeojson = encodeURIComponent(JSON.stringify(geojson));
+      return `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/geojson(${encodedGeojson})/auto/80x60@2x?logo=false&attribution=false&access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`;
+    } catch (e) {}
+  }
+
+  return `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/${lng},${lat},15,0/80x60@2x?logo=false&attribution=false&access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`;
 };
 
 export default function LeadsMap({ leads = [], onSelectLead, onGoToBackend }) {
@@ -287,6 +302,31 @@ export default function LeadsMap({ leads = [], onSelectLead, onGoToBackend }) {
       markersRef.current.push(marker);
     });
 
+    // Load ALL parcel boundaries on map load
+    const parcelFeatures = filteredLeads
+      .filter(lead => lead.boundary)
+      .map(lead => {
+        try {
+          const geometry = typeof lead.boundary === 'string' ? JSON.parse(lead.boundary) : lead.boundary;
+          return {
+            type: 'Feature',
+            properties: { leadId: lead.id },
+            geometry
+          };
+        } catch (e) {
+          return null;
+        }
+      })
+      .filter(f => f !== null);
+
+    const source = map.current.getSource('parcels');
+    if (source) {
+      source.setData({
+        type: 'FeatureCollection',
+        features: parcelFeatures
+      });
+    }
+
     if (leadsWithCoords.length > 0) {
       const bounds = new mapboxgl.LngLatBounds();
       leadsWithCoords.forEach(lead => bounds.extend([lead.lng, lead.lat]));
@@ -485,27 +525,15 @@ export default function LeadsMap({ leads = [], onSelectLead, onGoToBackend }) {
                     </div>
                   </div>
 
-                  {/* Parcel Thumbnail with satellite + KML overlay */}
-                  <div className="w-20 h-14 rounded overflow-hidden flex-shrink-0 bg-slate-900 border border-slate-700 relative">
+                  {/* Parcel Thumbnail with satellite + boundary overlay */}
+                  <div className="w-20 h-14 rounded overflow-hidden flex-shrink-0 bg-slate-900 border border-slate-700">
                     {lead.lat && lead.lng ? (
-                      <>
-                        <img
-                          src={getSatelliteThumbnail(lead.boundary ? getCentroid(lead.boundary)?.lat || lead.lat : lead.lat, lead.boundary ? getCentroid(lead.boundary)?.lng || lead.lng : lead.lng)}
-                          alt=""
-                          className="w-full h-full object-cover"
-                          onError={(e) => e.target.style.display = 'none'}
-                        />
-                        {lead.boundary && getBoundarySvgPoints(lead.boundary) && (
-                          <svg viewBox="0 0 100 70" className="absolute inset-0 w-full h-full">
-                            <polygon
-                              points={getBoundarySvgPoints(lead.boundary)}
-                              fill="rgba(255,0,0,0.2)"
-                              stroke="#FF0000"
-                              strokeWidth="2"
-                            />
-                          </svg>
-                        )}
-                      </>
+                      <img
+                        src={getSatelliteThumbnail(lead.lat, lead.lng, lead.boundary)}
+                        alt=""
+                        className="w-full h-full object-cover"
+                        onError={(e) => e.target.style.display = 'none'}
+                      />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
                         <svg className="w-5 h-5 text-white/20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
