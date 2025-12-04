@@ -309,6 +309,7 @@ export default function Dashboard() {
               leads={leads}
               onSelectLead={setSelectedLead}
               pipelines={PIPELINES}
+              onGoToBackend={() => router.push('/backend')}
             />
           )}
 

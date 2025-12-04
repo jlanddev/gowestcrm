@@ -30,7 +30,7 @@ const getSatelliteThumbnail = (lat, lng, zoom = 15) => {
   return `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/${lng},${lat},${zoom},0/120x80@2x?access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`;
 };
 
-export default function LeadsMap({ leads = [], onSelectLead }) {
+export default function LeadsMap({ leads = [], onSelectLead, onGoToBackend }) {
   const mapContainer = useRef(null);
   const map = useRef(null);
   const markersRef = useRef([]);
@@ -300,10 +300,19 @@ export default function LeadsMap({ leads = [], onSelectLead }) {
     <div className="relative w-full h-full flex">
       {/* Leads Sidebar */}
       <div className={`h-full bg-slate-900 border-r border-slate-700/50 flex flex-col transition-all duration-300 ${sidebarCollapsed ? 'w-0 overflow-hidden' : 'w-72'}`}>
-        {/* Header */}
+        {/* Header with Logo and Backend link */}
         <div className="p-4 border-b border-slate-700/50">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-white font-semibold text-lg">
+          <div className="flex items-center justify-between mb-4">
+            <img src="/logo.svg" alt="GoWest" className="h-8" />
+            <button
+              onClick={onGoToBackend}
+              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white text-sm rounded-lg transition"
+            >
+              Backend
+            </button>
+          </div>
+          <div className="flex items-center justify-between">
+            <h2 className="text-white font-semibold">
               {filteredLeads.length} {filteredLeads.length === 1 ? 'Lead' : 'Leads'}
             </h2>
             <button
