@@ -485,30 +485,33 @@ export default function LeadsMap({ leads = [], onSelectLead, onGoToBackend }) {
                     </div>
                   </div>
 
-                  {/* Parcel Thumbnail */}
-                  <div className="w-20 h-14 rounded overflow-hidden flex-shrink-0 bg-slate-900 border border-slate-700 flex items-center justify-center">
-                    {lead.boundary && getBoundarySvgPoints(lead.boundary) ? (
-                      <svg viewBox="0 0 100 70" className="w-full h-full">
-                        <polygon
-                          points={getBoundarySvgPoints(lead.boundary)}
-                          fill="rgba(255,0,0,0.15)"
-                          stroke="#FF0000"
-                          strokeWidth="2"
+                  {/* Parcel Thumbnail with satellite + KML overlay */}
+                  <div className="w-20 h-14 rounded overflow-hidden flex-shrink-0 bg-slate-900 border border-slate-700 relative">
+                    {lead.lat && lead.lng ? (
+                      <>
+                        <img
+                          src={getSatelliteThumbnail(lead.boundary ? getCentroid(lead.boundary)?.lat || lead.lat : lead.lat, lead.boundary ? getCentroid(lead.boundary)?.lng || lead.lng : lead.lng)}
+                          alt=""
+                          className="w-full h-full object-cover"
+                          onError={(e) => e.target.style.display = 'none'}
                         />
-                      </svg>
-                    ) : lead.lat && lead.lng ? (
-                      <svg viewBox="0 0 100 70" className="w-full h-full p-1">
-                        <rect
-                          x="20" y="15" width="60" height="40"
-                          fill="rgba(255,0,0,0.1)"
-                          stroke="#FF0000"
-                          strokeWidth="2"
-                        />
-                      </svg>
+                        {lead.boundary && getBoundarySvgPoints(lead.boundary) && (
+                          <svg viewBox="0 0 100 70" className="absolute inset-0 w-full h-full">
+                            <polygon
+                              points={getBoundarySvgPoints(lead.boundary)}
+                              fill="rgba(255,0,0,0.2)"
+                              stroke="#FF0000"
+                              strokeWidth="2"
+                            />
+                          </svg>
+                        )}
+                      </>
                     ) : (
-                      <svg className="w-5 h-5 text-white/20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                      </svg>
+                      <div className="w-full h-full flex items-center justify-center">
+                        <svg className="w-5 h-5 text-white/20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        </svg>
+                      </div>
                     )}
                   </div>
                 </div>
