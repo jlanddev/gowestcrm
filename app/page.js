@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -105,6 +106,15 @@ export default function LoginPage() {
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
+
+          <div className="mt-6 pt-6 border-t border-gray-200 text-center">
+            <p className="text-gray-600 text-sm">
+              Need an account?{' '}
+              <Link href="/signup" className="text-rust hover:text-navy font-semibold transition-colors">
+                Create Account
+              </Link>
+            </p>
+          </div>
         </div>
 
         <p className="text-center text-gray-400 text-sm mt-6">
