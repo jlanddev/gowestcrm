@@ -11,17 +11,18 @@ const supabase = createClient(
 
 // Pipeline Categories
 const PIPELINES = [
-  { id: 'jv', name: 'JV Development', color: '#8B5CF6' },
-  { id: 'development', name: 'Developments', color: '#3B82F6' },
-  { id: 'listing', name: 'Listings', color: '#22C55E' },
-  { id: 'dispo', name: 'Dispo', color: '#EF4444' },
+  { id: 'jv', name: 'JV Development', color: '#6B7280' },
+  { id: 'development', name: 'Developments', color: '#6B7280' },
+  { id: 'listing', name: 'Listings', color: '#6B7280' },
+  { id: 'capital', name: 'Capital Partners', color: '#6B7280' },
+  { id: 'dispo', name: 'Dispo', color: '#6B7280' },
 ];
 
 const MARKETING_PIPELINES = [
-  { id: 'google_ppc', name: 'Google PPC', color: '#F59E0B' },
-  { id: 'google_ppc_dispo', name: 'Google PPC Dispo', color: '#D97706' },
-  { id: 'facebook', name: 'Facebook', color: '#3B82F6' },
-  { id: 'facebook_dispo', name: 'Facebook Dispo', color: '#2563EB' },
+  { id: 'google_ppc', name: 'Google PPC', color: '#6B7280' },
+  { id: 'google_ppc_dispo', name: 'Google PPC Dispo', color: '#6B7280' },
+  { id: 'facebook', name: 'Facebook', color: '#6B7280' },
+  { id: 'facebook_dispo', name: 'Facebook Dispo', color: '#6B7280' },
 ];
 
 const STAGES = ['New', 'Contacted', 'Qualified', 'Negotiating', 'Under Contract', 'Closed', 'Lost'];

@@ -301,54 +301,90 @@ export default function LeadsMap({ leads = [], onSelectLead, onGoToBackend }) {
       {/* Leads Sidebar */}
       <div className={`h-full bg-navy flex flex-col transition-all duration-300 ${sidebarCollapsed ? 'w-0 overflow-hidden' : 'w-80'}`}>
         {/* Header */}
-        <div className="p-5">
-          <div className="flex items-center justify-between mb-1">
-            <h1 className="text-white text-2xl font-bold">
+        <div className="p-5 border-b border-white/10">
+          <div className="flex items-center justify-between mb-2">
+            <h1 className="text-white text-xl font-semibold">
               {filteredLeads.length} Active Leads
             </h1>
-            <div className="flex gap-2">
-              <button onClick={onGoToBackend} className="p-2 text-white/50 hover:text-white hover:bg-white/10 rounded-lg transition">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-              </button>
-              <button onClick={() => setSidebarCollapsed(true)} className="p-2 text-white/50 hover:text-white hover:bg-white/10 rounded-lg transition">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
-                </svg>
-              </button>
-            </div>
+            <button onClick={() => setSidebarCollapsed(true)} className="p-2 text-white/50 hover:text-white hover:bg-white/10 rounded-lg transition">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+              </svg>
+            </button>
           </div>
-          <div className="text-white/50 text-sm">GoWest Lands</div>
+          <div className="text-white/40 text-sm">Go West</div>
+          <button
+            onClick={onGoToBackend}
+            className="mt-3 w-full px-4 py-2 bg-rust hover:bg-rust/80 text-white text-sm font-medium rounded-lg transition"
+          >
+            Backend
+          </button>
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 gap-3 px-5 pb-5">
+        <div className="grid grid-cols-2 gap-2 p-4">
           <div className="bg-white/5 rounded-lg p-3">
-            <div className="text-white/50 text-xs uppercase tracking-wide">New Leads</div>
-            <div className="text-rust text-2xl font-bold">{filteredLeads.filter(l => l.stage === 'New').length}</div>
+            <div className="text-white/40 text-xs">New Leads</div>
+            <div className="text-white text-xl font-semibold">{filteredLeads.filter(l => l.stage === 'New').length}</div>
           </div>
           <div className="bg-white/5 rounded-lg p-3">
-            <div className="text-white/50 text-xs uppercase tracking-wide">Offers Out</div>
-            <div className="text-rust text-2xl font-bold">{filteredLeads.filter(l => l.stage === 'Negotiating').length}</div>
+            <div className="text-white/40 text-xs">Offers Out</div>
+            <div className="text-white text-xl font-semibold">{filteredLeads.filter(l => l.stage === 'Negotiating').length}</div>
           </div>
           <div className="bg-white/5 rounded-lg p-3">
-            <div className="text-white/50 text-xs uppercase tracking-wide">Signed Contracts</div>
-            <div className="text-white text-2xl font-bold">{filteredLeads.filter(l => l.stage === 'Under Contract').length}</div>
+            <div className="text-white/40 text-xs">Contracts</div>
+            <div className="text-white text-xl font-semibold">{filteredLeads.filter(l => l.stage === 'Under Contract').length}</div>
           </div>
           <div className="bg-white/5 rounded-lg p-3">
-            <div className="text-white/50 text-xs uppercase tracking-wide">Projected Revenue</div>
-            <div className="text-white text-2xl font-bold">$0</div>
+            <div className="text-white/40 text-xs">Closed</div>
+            <div className="text-white text-xl font-semibold">{filteredLeads.filter(l => l.stage === 'Closed').length}</div>
           </div>
         </div>
 
-        {/* Filter Tabs */}
-        <div className="flex border-b border-white/10 px-5 gap-4 text-sm">
-          <button className="py-3 text-white border-b-2 border-rust font-medium">ALL DEALS</button>
-          <button className="py-3 text-white/50 hover:text-white">FLIPS</button>
-          <button className="py-3 text-white/50 hover:text-white">SUBDIVISIONS</button>
-          <button className="py-3 text-white/50 hover:text-white">ENTITLEMENTS</button>
+        {/* Pipeline Filter Tabs - Scrollable */}
+        <div className="border-b border-white/10 overflow-x-auto">
+          <div className="flex px-4 gap-1 min-w-max">
+            <button
+              onClick={() => setFilterPipeline('all')}
+              className={`px-3 py-2 text-sm whitespace-nowrap rounded-t-lg transition ${
+                filterPipeline === 'all' ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white'
+              }`}
+            >
+              All
+            </button>
+            <button
+              onClick={() => setFilterPipeline('jv')}
+              className={`px-3 py-2 text-sm whitespace-nowrap rounded-t-lg transition ${
+                filterPipeline === 'jv' ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white'
+              }`}
+            >
+              JV Development
+            </button>
+            <button
+              onClick={() => setFilterPipeline('development')}
+              className={`px-3 py-2 text-sm whitespace-nowrap rounded-t-lg transition ${
+                filterPipeline === 'development' ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white'
+              }`}
+            >
+              Developments
+            </button>
+            <button
+              onClick={() => setFilterPipeline('listing')}
+              className={`px-3 py-2 text-sm whitespace-nowrap rounded-t-lg transition ${
+                filterPipeline === 'listing' ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white'
+              }`}
+            >
+              Listings
+            </button>
+            <button
+              onClick={() => setFilterPipeline('dispo')}
+              className={`px-3 py-2 text-sm whitespace-nowrap rounded-t-lg transition ${
+                filterPipeline === 'dispo' ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white'
+              }`}
+            >
+              Dispo
+            </button>
+          </div>
         </div>
 
         {/* Leads List */}
@@ -366,31 +402,25 @@ export default function LeadsMap({ leads = [], onSelectLead, onGoToBackend }) {
                   selectedLead?.id === lead.id ? 'bg-white/10' : 'hover:bg-white/5'
                 }`}
               >
-                <div className="flex p-4">
+                <div className="flex p-4 gap-3">
                   {/* Lead Info */}
                   <div className="flex-1 min-w-0">
-                    <div className="text-white font-semibold text-lg">
+                    <div className="text-white font-medium">
                       {lead.name || 'Unknown Owner'}
                     </div>
-                    <div className="flex items-center gap-1 text-white/50 text-sm mt-1">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                      </svg>
+                    <div className="text-white/40 text-sm mt-1">
                       {lead.county ? `${lead.county} County, ${lead.state}` : `${lead.city || ''}, ${lead.state || ''}`}
                     </div>
-                    <div className="flex items-center gap-3 mt-3">
+                    <div className="flex items-center gap-3 mt-2">
                       {lead.acreage > 0 && (
-                        <div className="bg-rust/20 px-2 py-1 rounded">
-                          <span className="text-white/50 text-xs uppercase">Acres</span>
-                          <span className="text-rust font-bold ml-2">{lead.acreage}</span>
-                        </div>
+                        <span className="text-rust text-sm font-medium">{lead.acreage} ac</span>
                       )}
-                      <div className="text-white/40 text-xs uppercase">{lead.stage}</div>
+                      <span className="text-white/30 text-xs">{lead.stage}</span>
                     </div>
                   </div>
 
                   {/* Satellite Thumbnail */}
-                  <div className="w-28 h-20 rounded-lg overflow-hidden flex-shrink-0 bg-white/10 ml-3">
+                  <div className="w-24 h-16 rounded overflow-hidden flex-shrink-0 bg-white/10">
                     {lead.lat && lead.lng ? (
                       <img
                         src={getSatelliteThumbnail(lead.lat, lead.lng)}
@@ -399,8 +429,8 @@ export default function LeadsMap({ leads = [], onSelectLead, onGoToBackend }) {
                         onError={(e) => e.target.style.display = 'none'}
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-white/30">
-                        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div className="w-full h-full flex items-center justify-center text-white/20">
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                         </svg>
                       </div>
