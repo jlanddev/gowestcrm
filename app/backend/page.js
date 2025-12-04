@@ -602,7 +602,11 @@ function LeadCard({ lead, isSelected, onToggleSelect, onDelete, compact }) {
           />
           <div className="min-w-0">
             <div className="font-medium text-white truncate">{lead.name || 'Unknown'}</div>
-            <div className="text-xs text-slate-400 truncate">{lead.address || lead.city || 'No location'}</div>
+            {(lead.county || lead.city || lead.address) && (
+              <div className="text-xs text-slate-400 truncate">
+                {lead.county ? `${lead.county} County, ${lead.state || 'TX'}` : (lead.city ? `${lead.city}, ${lead.state || 'TX'}` : lead.address)}
+              </div>
+            )}
             {lead.acreage > 0 && (
               <div className="text-xs text-rust mt-1">{lead.acreage} acres</div>
             )}
@@ -692,8 +696,28 @@ function AddLeadSection({ onSave }) {
     setSaving(true);
 
     const leadData = {
-      ...formData,
+      name: formData.name,
+      address: formData.address,
+      city: formData.city,
+      state: formData.state,
+      county: formData.county,
       acreage: formData.acreage ? parseFloat(formData.acreage) : null,
+      phone: formData.phone,
+      email: formData.email,
+      pipeline: formData.pipeline,
+      stage: formData.stage,
+      lat: formData.lat,
+      lng: formData.lng,
+      boundary: formData.boundary,
+      parcel_number: formData.parcel_number,
+      contact_name: formData.contact_name,
+      notes: formData.notes,
+      has_home: formData.has_home,
+      is_listed: formData.is_listed,
+      is_agent_lead: formData.is_agent_lead,
+      agent_name: formData.agent_name || null,
+      agent_phone: formData.agent_phone || null,
+      agent_email: formData.agent_email || null,
       created_at: new Date().toISOString(),
     };
 

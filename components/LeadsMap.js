@@ -7,11 +7,11 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
 const PIPELINE_COLORS = {
-  jv: '#6B7280',
-  development: '#6B7280',
-  listing: '#6B7280',
-  capital: '#6B7280',
-  dispo: '#6B7280',
+  jv: '#1e3a5f',
+  development: '#1e3a5f',
+  listing: '#1e3a5f',
+  capital: '#1e3a5f',
+  dispo: '#1e3a5f',
 };
 
 const PIPELINE_NAMES = {
@@ -111,8 +111,8 @@ export default function LeadsMap({ leads = [], onSelectLead, onGoToBackend }) {
         type: 'fill',
         source: 'parcels',
         paint: {
-          'fill-color': '#964B00',
-          'fill-opacity': 0.3,
+          'fill-color': '#FF0000',
+          'fill-opacity': 0.15,
         },
       });
 
@@ -121,8 +121,8 @@ export default function LeadsMap({ leads = [], onSelectLead, onGoToBackend }) {
         type: 'line',
         source: 'parcels',
         paint: {
-          'line-color': '#964B00',
-          'line-width': 2,
+          'line-color': '#FF0000',
+          'line-width': 4,
         },
       });
     });
@@ -184,13 +184,25 @@ export default function LeadsMap({ leads = [], onSelectLead, onGoToBackend }) {
       const el = document.createElement('div');
       el.className = 'lead-marker';
       el.innerHTML = `
-        <div class="marker-pin" style="
-          width: 24px;
-          height: 24px;
-          background: ${color};
-          border: 3px solid white;
+        <div class="marker-sonar" style="
+          position: absolute;
+          width: 16px;
+          height: 16px;
+          background: transparent;
+          border: 2px solid ${color};
           border-radius: 50%;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+          animation: sonar 3s ease-out infinite;
+          left: 0px;
+          top: 0px;
+        "></div>
+        <div class="marker-pin" style="
+          position: relative;
+          width: 16px;
+          height: 16px;
+          background: ${color};
+          border: 2px solid white;
+          border-radius: 50%;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.3);
           cursor: pointer;
           transition: transform 0.2s;
         "></div>
@@ -408,9 +420,11 @@ export default function LeadsMap({ leads = [], onSelectLead, onGoToBackend }) {
                     <div className="text-white font-medium">
                       {lead.name || 'Unknown Owner'}
                     </div>
-                    <div className="text-white/40 text-sm mt-1">
-                      {lead.county ? `${lead.county} County, ${lead.state}` : `${lead.city || ''}, ${lead.state || ''}`}
-                    </div>
+                    {(lead.county || lead.city || lead.address) && (
+                      <div className="text-white/40 text-sm mt-1">
+                        {lead.county ? `${lead.county} County, ${lead.state || 'TX'}` : (lead.city ? `${lead.city}, ${lead.state || 'TX'}` : lead.address)}
+                      </div>
+                    )}
                     <div className="flex items-center gap-3 mt-2">
                       {lead.acreage > 0 && (
                         <span className="text-rust text-sm font-medium">{lead.acreage} ac</span>
@@ -419,21 +433,30 @@ export default function LeadsMap({ leads = [], onSelectLead, onGoToBackend }) {
                     </div>
                   </div>
 
-                  {/* Satellite Thumbnail */}
-                  <div className="w-24 h-16 rounded overflow-hidden flex-shrink-0 bg-white/10">
-                    {lead.lat && lead.lng ? (
-                      <img
-                        src={getSatelliteThumbnail(lead.lat, lead.lng)}
-                        alt=""
-                        className="w-full h-full object-cover"
-                        onError={(e) => e.target.style.display = 'none'}
-                      />
+                  {/* Parcel Thumbnail */}
+                  <div className="w-20 h-14 rounded overflow-hidden flex-shrink-0 bg-slate-900 border border-slate-700 flex items-center justify-center">
+                    {lead.boundary ? (
+                      <svg viewBox="0 0 100 70" className="w-full h-full p-1">
+                        <polygon
+                          points="15,55 25,15 75,10 85,50 70,60 15,55"
+                          fill="rgba(255,0,0,0.1)"
+                          stroke="#FF0000"
+                          strokeWidth="2"
+                        />
+                      </svg>
+                    ) : lead.lat && lead.lng ? (
+                      <svg viewBox="0 0 100 70" className="w-full h-full p-1">
+                        <rect
+                          x="20" y="15" width="60" height="40"
+                          fill="rgba(255,0,0,0.1)"
+                          stroke="#FF0000"
+                          strokeWidth="2"
+                        />
+                      </svg>
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-white/20">
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                        </svg>
-                      </div>
+                      <svg className="w-5 h-5 text-white/20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      </svg>
                     )}
                   </div>
                 </div>
@@ -689,6 +712,20 @@ export default function LeadsMap({ leads = [], onSelectLead, onGoToBackend }) {
           }
           .lead-marker {
             cursor: pointer;
+            position: relative;
+          }
+          @keyframes sonar {
+            0% {
+              transform: scale(1);
+              opacity: 0.8;
+            }
+            50% {
+              opacity: 0.4;
+            }
+            100% {
+              transform: scale(3);
+              opacity: 0;
+            }
           }
         `}</style>
       </div>
