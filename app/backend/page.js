@@ -18,11 +18,20 @@ const PIPELINES = [
   { id: 'dispo', name: 'Dispo', color: '#6B7280' },
 ];
 
+const UNDERWRITER_PIPELINES = [
+  { id: 'project_underwriters', name: 'Project Underwriters', color: '#6B7280' },
+];
+
 const MARKETING_PIPELINES = [
   { id: 'google_ppc', name: 'Google PPC', color: '#6B7280' },
   { id: 'google_ppc_dispo', name: 'Google PPC Dispo', color: '#6B7280' },
   { id: 'facebook', name: 'Facebook', color: '#6B7280' },
   { id: 'facebook_dispo', name: 'Facebook Dispo', color: '#6B7280' },
+];
+
+const OUTBOUND_PIPELINES = [
+  { id: 'cold_calling', name: 'Cold Calling', color: '#6B7280' },
+  { id: 'agent_partners', name: 'Agent Partners', color: '#6B7280' },
 ];
 
 const STAGES = ['New', 'Contacted', 'Qualified', 'Negotiating', 'Under Contract', 'Closed', 'Lost'];
@@ -36,6 +45,8 @@ export default function BackendPage() {
   const [activeSection, setActiveSection] = useState('overview'); // overview, pipeline, marketing, import
   const [activePipeline, setActivePipeline] = useState('jv');
   const [activeMarketing, setActiveMarketing] = useState('google_ppc');
+  const [activeOutbound, setActiveOutbound] = useState('cold_calling');
+  const [activeUnderwriter, setActiveUnderwriter] = useState('project_underwriters');
   const [selectedLeads, setSelectedLeads] = useState([]);
   const [showImportModal, setShowImportModal] = useState(false);
   const router = useRouter();
@@ -130,11 +141,25 @@ export default function BackendPage() {
           {PIPELINES.map(p => (
             <SidebarItem
               key={p.id}
-              icon={<span className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color }} />}
+              icon={<span className="w-2 h-2 rounded-full bg-slate-500" />}
               label={p.name}
               count={getLeadsByPipeline(p.id).length}
               active={activeSection === 'pipeline' && activePipeline === p.id}
               onClick={() => { setActiveSection('pipeline'); setActivePipeline(p.id); }}
+            />
+          ))}
+
+          <div className="pt-4 pb-2">
+            <div className="text-xs text-slate-500 uppercase tracking-wide px-3">Project Underwriters</div>
+          </div>
+          {UNDERWRITER_PIPELINES.map(p => (
+            <SidebarItem
+              key={p.id}
+              icon={<span className="w-2 h-2 rounded-full bg-slate-500" />}
+              label={p.name}
+              count={getLeadsByPipeline(p.id).length}
+              active={activeSection === 'underwriter' && activeUnderwriter === p.id}
+              onClick={() => { setActiveSection('underwriter'); setActiveUnderwriter(p.id); }}
             />
           ))}
 
@@ -149,6 +174,20 @@ export default function BackendPage() {
               count={getLeadsByPipeline(p.id).length}
               active={activeSection === 'marketing' && activeMarketing === p.id}
               onClick={() => { setActiveSection('marketing'); setActiveMarketing(p.id); }}
+            />
+          ))}
+
+          <div className="pt-4 pb-2">
+            <div className="text-xs text-slate-500 uppercase tracking-wide px-3">Marketing Outbound</div>
+          </div>
+          {OUTBOUND_PIPELINES.map(p => (
+            <SidebarItem
+              key={p.id}
+              icon={<span className="w-2 h-2 rounded-full bg-slate-500" />}
+              label={p.name}
+              count={getLeadsByPipeline(p.id).length}
+              active={activeSection === 'outbound' && activeOutbound === p.id}
+              onClick={() => { setActiveSection('outbound'); setActiveOutbound(p.id); }}
             />
           ))}
 
@@ -198,6 +237,32 @@ export default function BackendPage() {
           <PipelineSection
             pipeline={MARKETING_PIPELINES.find(p => p.id === activeMarketing)}
             leads={getLeadsByPipeline(activeMarketing)}
+            stages={STAGES}
+            selectedLeads={selectedLeads}
+            onToggleSelect={toggleLeadSelection}
+            onDelete={deleteLead}
+            onDeleteSelected={deleteSelectedLeads}
+            onUpdate={loadData}
+          />
+        )}
+
+        {activeSection === 'underwriter' && (
+          <PipelineSection
+            pipeline={UNDERWRITER_PIPELINES.find(p => p.id === activeUnderwriter)}
+            leads={getLeadsByPipeline(activeUnderwriter)}
+            stages={STAGES}
+            selectedLeads={selectedLeads}
+            onToggleSelect={toggleLeadSelection}
+            onDelete={deleteLead}
+            onDeleteSelected={deleteSelectedLeads}
+            onUpdate={loadData}
+          />
+        )}
+
+        {activeSection === 'outbound' && (
+          <PipelineSection
+            pipeline={OUTBOUND_PIPELINES.find(p => p.id === activeOutbound)}
+            leads={getLeadsByPipeline(activeOutbound)}
             stages={STAGES}
             selectedLeads={selectedLeads}
             onToggleSelect={toggleLeadSelection}
