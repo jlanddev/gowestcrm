@@ -184,28 +184,23 @@ export default function LeadsMap({ leads = [], onSelectLead, onGoToBackend }) {
       const el = document.createElement('div');
       el.className = 'lead-marker';
       el.innerHTML = `
-        <div class="marker-sonar" style="
-          position: absolute;
-          width: 16px;
-          height: 16px;
-          background: transparent;
-          border: 2px solid ${color};
-          border-radius: 50%;
-          animation: sonar 3s ease-out infinite;
-          left: 0px;
-          top: 0px;
-        "></div>
-        <div class="marker-pin" style="
+        <div style="
           position: relative;
-          width: 16px;
-          height: 16px;
-          background: ${color};
-          border: 2px solid white;
-          border-radius: 50%;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+          display: flex;
+          flex-direction: column;
+          align-items: center;
           cursor: pointer;
-          transition: transform 0.2s;
-        "></div>
+        ">
+          <div class="marker-pin" style="
+            background: #1e3a5f;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 4px solid rgba(255,255,255,0.95);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.5), 0 0 0 6px rgba(30, 58, 95, 0.3);
+            animation: sonarPulse 2.5s ease-out infinite;
+          "></div>
+        </div>
       `;
 
       el.addEventListener('mouseenter', () => {
@@ -714,17 +709,24 @@ export default function LeadsMap({ leads = [], onSelectLead, onGoToBackend }) {
             cursor: pointer;
             position: relative;
           }
-          @keyframes sonar {
+          @keyframes sonarPulse {
             0% {
-              transform: scale(1);
-              opacity: 0.8;
+              box-shadow:
+                0 6px 16px rgba(0,0,0,0.5),
+                0 0 0 6px rgba(30, 58, 95, 0.4),
+                0 0 0 0 rgba(30, 58, 95, 0.8);
             }
             50% {
-              opacity: 0.4;
+              box-shadow:
+                0 6px 16px rgba(0,0,0,0.5),
+                0 0 0 6px rgba(30, 58, 95, 0.3),
+                0 0 0 40px rgba(30, 58, 95, 0);
             }
             100% {
-              transform: scale(3);
-              opacity: 0;
+              box-shadow:
+                0 6px 16px rgba(0,0,0,0.5),
+                0 0 0 6px rgba(30, 58, 95, 0.4),
+                0 0 0 50px rgba(30, 58, 95, 0);
             }
           }
         `}</style>
