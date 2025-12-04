@@ -9,14 +9,33 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 );
 
+// Pipeline Categories
+const PIPELINES = [
+  { id: 'jv', name: 'JV Development', color: '#8B5CF6' },
+  { id: 'development', name: 'Developments', color: '#3B82F6' },
+  { id: 'listing', name: 'Listings', color: '#22C55E' },
+  { id: 'dispo', name: 'Dispo', color: '#EF4444' },
+];
+
+const MARKETING_PIPELINES = [
+  { id: 'google_ppc', name: 'Google PPC', color: '#F59E0B' },
+  { id: 'google_ppc_dispo', name: 'Google PPC Dispo', color: '#D97706' },
+  { id: 'facebook', name: 'Facebook', color: '#3B82F6' },
+  { id: 'facebook_dispo', name: 'Facebook Dispo', color: '#2563EB' },
+];
+
+const STAGES = ['New', 'Contacted', 'Qualified', 'Negotiating', 'Under Contract', 'Closed', 'Lost'];
+
 export default function BackendPage() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [leads, setLeads] = useState([]);
+  const [tasks, setTasks] = useState([]);
   const [users, setUsers] = useState([]);
-  const [activeTab, setActiveTab] = useState('all');
+  const [activeSection, setActiveSection] = useState('overview'); // overview, pipeline, marketing, import
+  const [activePipeline, setActivePipeline] = useState('jv');
+  const [activeMarketing, setActiveMarketing] = useState('google_ppc');
   const [selectedLeads, setSelectedLeads] = useState([]);
-  const [showPushModal, setShowPushModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const router = useRouter();
 
@@ -35,17 +54,19 @@ export default function BackendPage() {
   };
 
   const loadData = async () => {
-    const [leadsRes, usersRes] = await Promise.all([
+    const [leadsRes, tasksRes, usersRes] = await Promise.all([
       supabase.from('leads').select('*').order('created_at', { ascending: false }),
+      supabase.from('tasks').select('*').order('due_date', { ascending: true }),
       supabase.from('users').select('*'),
     ]);
     setLeads(leadsRes.data || []);
+    setTasks(tasksRes.data || []);
     setUsers(usersRes.data || []);
     setLoading(false);
   };
 
   const deleteLead = async (leadId) => {
-    if (confirm('Are you sure you want to delete this lead?')) {
+    if (confirm('Delete this lead?')) {
       await supabase.from('leads').delete().eq('id', leadId);
       loadData();
     }
@@ -53,73 +74,438 @@ export default function BackendPage() {
 
   const deleteSelectedLeads = async () => {
     if (selectedLeads.length === 0) return;
-    if (confirm(`Delete ${selectedLeads.length} selected lead(s)?`)) {
+    if (confirm(`Delete ${selectedLeads.length} lead(s)?`)) {
       await supabase.from('leads').delete().in('id', selectedLeads);
       setSelectedLeads([]);
       loadData();
     }
   };
 
-  // Filter leads based on active tab
-  const getFilteredLeads = () => {
-    switch (activeTab) {
-      case 'new':
-        return leads.filter(l => l.stage === 'New');
-      case 'qualified':
-        return leads.filter(l => l.stage === 'Qualified' || l.stage === 'Contacted');
-      case 'unassigned':
-        return leads.filter(l => !l.assigned_to);
-      case 'large':
-        return leads.filter(l => l.acreage >= 50);
-      case 'capital':
-        return leads.filter(l => l.pipeline === 'capital');
-      default:
-        return leads;
-    }
-  };
-
-  const filteredLeads = getFilteredLeads();
-
-  // Calculate stats
-  const stats = {
-    total: leads.length,
-    new: leads.filter(l => l.stage === 'New').length,
-    qualified: leads.filter(l => l.stage === 'Qualified' || l.stage === 'Contacted').length,
-    large: leads.filter(l => l.acreage >= 50).length,
-    recent: leads.filter(l => {
-      const created = new Date(l.created_at);
-      const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-      return created > dayAgo;
-    }).length,
+  const getLeadsByPipeline = (pipelineId) => {
+    return leads.filter(l => l.pipeline === pipelineId);
   };
 
   const toggleLeadSelection = (leadId) => {
     setSelectedLeads(prev =>
-      prev.includes(leadId)
-        ? prev.filter(id => id !== leadId)
-        : [...prev, leadId]
+      prev.includes(leadId) ? prev.filter(id => id !== leadId) : [...prev, leadId]
     );
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-navy flex items-center justify-center">
+        <div className="text-white text-lg">Loading...</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-900 flex">
+      {/* Left Sidebar */}
+      <div className="w-64 bg-slate-800 border-r border-slate-700 flex flex-col">
+        {/* Logo */}
+        <div className="p-4 border-b border-slate-700">
+          <img src="/logo.svg" alt="GoWest" className="h-10" />
+        </div>
+
+        {/* Navigation */}
+        <nav className="flex-1 p-3 space-y-1">
+          <SidebarItem
+            icon="📊"
+            label="Overview"
+            active={activeSection === 'overview'}
+            onClick={() => setActiveSection('overview')}
+          />
+
+          <div className="pt-4 pb-2">
+            <div className="text-xs text-slate-500 uppercase tracking-wide px-3">Pipelines</div>
+          </div>
+          {PIPELINES.map(p => (
+            <SidebarItem
+              key={p.id}
+              icon={<span className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color }} />}
+              label={p.name}
+              count={getLeadsByPipeline(p.id).length}
+              active={activeSection === 'pipeline' && activePipeline === p.id}
+              onClick={() => { setActiveSection('pipeline'); setActivePipeline(p.id); }}
+            />
+          ))}
+
+          <div className="pt-4 pb-2">
+            <div className="text-xs text-slate-500 uppercase tracking-wide px-3">Marketing Inbound</div>
+          </div>
+          {MARKETING_PIPELINES.map(p => (
+            <SidebarItem
+              key={p.id}
+              icon={<span className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color }} />}
+              label={p.name}
+              count={getLeadsByPipeline(p.id).length}
+              active={activeSection === 'marketing' && activeMarketing === p.id}
+              onClick={() => { setActiveSection('marketing'); setActiveMarketing(p.id); }}
+            />
+          ))}
+
+          <div className="pt-4 pb-2">
+            <div className="text-xs text-slate-500 uppercase tracking-wide px-3">Tools</div>
+          </div>
+          <SidebarItem
+            icon="📥"
+            label="Import Leads"
+            active={activeSection === 'import'}
+            onClick={() => setActiveSection('import')}
+          />
+        </nav>
+
+        {/* Back to Map */}
+        <div className="p-3 border-t border-slate-700">
+          <button
+            onClick={() => router.push('/dashboard')}
+            className="w-full flex items-center gap-3 px-3 py-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition"
+          >
+            <span>←</span>
+            <span>Back to Map</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="flex-1 overflow-auto">
+        {activeSection === 'overview' && (
+          <OverviewSection leads={leads} tasks={tasks} users={users} user={user} onTaskUpdate={loadData} />
+        )}
+
+        {activeSection === 'pipeline' && (
+          <PipelineSection
+            pipeline={PIPELINES.find(p => p.id === activePipeline)}
+            leads={getLeadsByPipeline(activePipeline)}
+            stages={STAGES}
+            selectedLeads={selectedLeads}
+            onToggleSelect={toggleLeadSelection}
+            onDelete={deleteLead}
+            onDeleteSelected={deleteSelectedLeads}
+            onUpdate={loadData}
+          />
+        )}
+
+        {activeSection === 'marketing' && (
+          <PipelineSection
+            pipeline={MARKETING_PIPELINES.find(p => p.id === activeMarketing)}
+            leads={getLeadsByPipeline(activeMarketing)}
+            stages={STAGES}
+            selectedLeads={selectedLeads}
+            onToggleSelect={toggleLeadSelection}
+            onDelete={deleteLead}
+            onDeleteSelected={deleteSelectedLeads}
+            onUpdate={loadData}
+          />
+        )}
+
+        {activeSection === 'import' && (
+          <ImportSection onImport={loadData} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function SidebarItem({ icon, label, count, active, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition ${
+        active ? 'bg-rust text-white' : 'text-slate-400 hover:text-white hover:bg-slate-700'
+      }`}
+    >
+      <div className="flex items-center gap-3">
+        <span className="text-sm">{icon}</span>
+        <span className="text-sm">{label}</span>
+      </div>
+      {count !== undefined && (
+        <span className={`text-xs px-2 py-0.5 rounded ${active ? 'bg-white/20' : 'bg-slate-700'}`}>
+          {count}
+        </span>
+      )}
+    </button>
+  );
+}
+
+function OverviewSection({ leads, tasks, users, user, onTaskUpdate }) {
+  const [currentDate, setCurrentDate] = useState(new Date());
+
+  const getDaysInMonth = (date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startDayOfWeek = firstDay.getDay();
+    const days = [];
+    for (let i = 0; i < startDayOfWeek; i++) days.push(null);
+    for (let i = 1; i <= daysInMonth; i++) days.push(new Date(year, month, i));
+    return days;
+  };
+
+  const getTasksForDate = (date) => {
+    if (!date) return [];
+    const dateStr = date.toISOString().split('T')[0];
+    return tasks.filter(task => task.due_date === dateStr);
+  };
+
+  const formatMonth = (date) => date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  const prevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+  const nextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+  const isToday = (date) => date && date.toDateString() === new Date().toDateString();
+
+  const days = getDaysInMonth(currentDate);
+  const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+  // Stats
+  const stats = {
+    totalLeads: leads.length,
+    newLeads: leads.filter(l => l.stage === 'New').length,
+    underContract: leads.filter(l => l.stage === 'Under Contract').length,
+    closed: leads.filter(l => l.stage === 'Closed').length,
+    upcomingTasks: tasks.filter(t => new Date(t.due_date) >= new Date()).length,
+  };
+
+  return (
+    <div className="p-6">
+      <h1 className="text-2xl font-semibold text-white mb-6">Overview</h1>
+
+      {/* Stats */}
+      <div className="grid grid-cols-5 gap-4 mb-8">
+        <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50">
+          <div className="text-3xl font-bold text-white">{stats.totalLeads}</div>
+          <div className="text-sm text-slate-400">Total Leads</div>
+        </div>
+        <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50">
+          <div className="text-3xl font-bold text-green-400">{stats.newLeads}</div>
+          <div className="text-sm text-slate-400">New Leads</div>
+        </div>
+        <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50">
+          <div className="text-3xl font-bold text-yellow-400">{stats.underContract}</div>
+          <div className="text-sm text-slate-400">Under Contract</div>
+        </div>
+        <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50">
+          <div className="text-3xl font-bold text-rust">{stats.closed}</div>
+          <div className="text-sm text-slate-400">Closed</div>
+        </div>
+        <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50">
+          <div className="text-3xl font-bold text-blue-400">{stats.upcomingTasks}</div>
+          <div className="text-sm text-slate-400">Upcoming Tasks</div>
+        </div>
+      </div>
+
+      {/* Calendar */}
+      <div className="bg-slate-800/50 rounded-xl border border-slate-700/50">
+        <div className="flex items-center justify-between p-4 border-b border-slate-700/50">
+          <button onClick={prevMonth} className="p-2 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-white transition">
+            ←
+          </button>
+          <h2 className="text-lg font-medium text-white">{formatMonth(currentDate)}</h2>
+          <button onClick={nextMonth} className="p-2 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-white transition">
+            →
+          </button>
+        </div>
+
+        <div className="p-4">
+          <div className="grid grid-cols-7 gap-1 mb-2">
+            {weekDays.map(day => (
+              <div key={day} className="text-center text-xs text-slate-500 py-2">{day}</div>
+            ))}
+          </div>
+          <div className="grid grid-cols-7 gap-1">
+            {days.map((date, i) => {
+              const dayTasks = getTasksForDate(date);
+              return (
+                <div
+                  key={i}
+                  className={`min-h-[80px] p-2 rounded-lg ${
+                    date ? 'bg-slate-900/50 hover:bg-slate-700/50 cursor-pointer' : ''
+                  } ${isToday(date) ? 'ring-2 ring-rust' : ''}`}
+                >
+                  {date && (
+                    <>
+                      <div className={`text-sm ${isToday(date) ? 'text-rust font-bold' : 'text-slate-400'}`}>
+                        {date.getDate()}
+                      </div>
+                      {dayTasks.slice(0, 2).map(task => (
+                        <div key={task.id} className="mt-1 text-xs bg-rust/20 text-rust px-1 py-0.5 rounded truncate">
+                          {task.title}
+                        </div>
+                      ))}
+                      {dayTasks.length > 2 && (
+                        <div className="mt-1 text-xs text-slate-500">+{dayTasks.length - 2} more</div>
+                      )}
+                    </>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PipelineSection({ pipeline, leads, stages, selectedLeads, onToggleSelect, onDelete, onDeleteSelected, onUpdate }) {
+  const [viewMode, setViewMode] = useState('kanban'); // kanban or list
+
+  const getLeadsByStage = (stage) => leads.filter(l => l.stage === stage);
+
   const selectAll = () => {
-    if (selectedLeads.length === filteredLeads.length) {
-      setSelectedLeads([]);
+    if (selectedLeads.length === leads.length) {
+      leads.forEach(l => onToggleSelect(l.id));
     } else {
-      setSelectedLeads(filteredLeads.map(l => l.id));
+      leads.forEach(l => {
+        if (!selectedLeads.includes(l.id)) onToggleSelect(l.id);
+      });
     }
   };
 
-  const tabs = [
-    { id: 'all', label: 'All Leads', count: leads.length },
-    { id: 'new', label: 'New Inflow', count: stats.new },
-    { id: 'qualified', label: 'Qualified', count: stats.qualified },
-    { id: 'unassigned', label: 'Unassigned', count: leads.filter(l => !l.assigned_to).length },
-    { id: 'large', label: '50+ Acres', count: stats.large },
-    { id: 'capital', label: 'Capital Partners', count: leads.filter(l => l.pipeline === 'capital').length },
+  return (
+    <div className="h-full flex flex-col">
+      {/* Header */}
+      <div className="p-4 border-b border-slate-700 bg-slate-800/50">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="w-3 h-3 rounded-full" style={{ backgroundColor: pipeline?.color }} />
+            <h1 className="text-xl font-semibold text-white">{pipeline?.name}</h1>
+            <span className="text-slate-400">({leads.length} leads)</span>
+          </div>
+          <div className="flex items-center gap-2">
+            {selectedLeads.length > 0 && (
+              <button
+                onClick={onDeleteSelected}
+                className="px-3 py-1.5 bg-red-600 hover:bg-red-500 text-white rounded-lg text-sm transition"
+              >
+                Delete ({selectedLeads.length})
+              </button>
+            )}
+            <button
+              onClick={() => setViewMode(viewMode === 'kanban' ? 'list' : 'kanban')}
+              className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm transition"
+            >
+              {viewMode === 'kanban' ? 'List View' : 'Kanban View'}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Content */}
+      {viewMode === 'kanban' ? (
+        <div className="flex-1 overflow-x-auto p-4">
+          <div className="flex gap-4 h-full min-w-max">
+            {stages.map(stage => (
+              <div key={stage} className="w-72 flex flex-col bg-slate-800/30 rounded-xl">
+                <div className="p-3 border-b border-slate-700/50">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-white">{stage}</span>
+                    <span className="text-xs bg-slate-700 px-2 py-0.5 rounded text-slate-300">
+                      {getLeadsByStage(stage).length}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex-1 overflow-y-auto p-2 space-y-2">
+                  {getLeadsByStage(stage).map(lead => (
+                    <LeadCard
+                      key={lead.id}
+                      lead={lead}
+                      isSelected={selectedLeads.includes(lead.id)}
+                      onToggleSelect={() => onToggleSelect(lead.id)}
+                      onDelete={() => onDelete(lead.id)}
+                      compact
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="flex-1 overflow-auto p-4">
+          <div className="mb-3">
+            <label className="flex items-center gap-2 text-slate-400 text-sm cursor-pointer">
+              <input
+                type="checkbox"
+                checked={selectedLeads.length === leads.length && leads.length > 0}
+                onChange={selectAll}
+                className="rounded border-slate-600 bg-slate-800 text-rust"
+              />
+              Select All ({leads.length})
+            </label>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {leads.map(lead => (
+              <LeadCard
+                key={lead.id}
+                lead={lead}
+                isSelected={selectedLeads.includes(lead.id)}
+                onToggleSelect={() => onToggleSelect(lead.id)}
+                onDelete={() => onDelete(lead.id)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LeadCard({ lead, isSelected, onToggleSelect, onDelete, compact }) {
+  return (
+    <div className={`bg-slate-800/50 rounded-lg border transition ${
+      isSelected ? 'border-rust ring-1 ring-rust' : 'border-slate-700/50 hover:border-slate-600'
+    } ${compact ? 'p-3' : 'p-4'}`}>
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-start gap-2 min-w-0">
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={onToggleSelect}
+            className="mt-1 rounded border-slate-600 bg-slate-800 text-rust"
+          />
+          <div className="min-w-0">
+            <div className="font-medium text-white truncate">{lead.name || 'Unknown'}</div>
+            <div className="text-xs text-slate-400 truncate">{lead.address || lead.city || 'No location'}</div>
+            {lead.acreage > 0 && (
+              <div className="text-xs text-rust mt-1">{lead.acreage} acres</div>
+            )}
+          </div>
+        </div>
+        <button
+          onClick={onDelete}
+          className="p-1 text-slate-500 hover:text-red-400 transition"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </svg>
+        </button>
+      </div>
+      {!compact && (
+        <div className="mt-3 pt-3 border-t border-slate-700/50 flex items-center gap-2 text-xs text-slate-400">
+          {lead.phone && <span>{lead.phone}</span>}
+          {lead.email && <span className="truncate">{lead.email}</span>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ImportSection({ onImport }) {
+  const [file, setFile] = useState(null);
+  const [importing, setImporting] = useState(false);
+  const [targetPipeline, setTargetPipeline] = useState('listing');
+
+  const allPipelines = [
+    ...PIPELINES,
+    ...MARKETING_PIPELINES,
   ];
 
-  const handleImportCSV = async (file) => {
+  const handleImport = async () => {
     if (!file) return;
+    setImporting(true);
 
     const Papa = (await import('papaparse')).default;
     Papa.parse(file, {
@@ -136,411 +522,78 @@ export default function BackendPage() {
             acreage: parseFloat(row.acreage || row.acres || 0),
             phone: row.phone || '',
             email: row.email || '',
-            pipeline: row.pipeline || 'listing',
+            pipeline: targetPipeline,
             stage: 'New',
             lat: parseFloat(row.lat || row.latitude || 0) || null,
             lng: parseFloat(row.lng || row.longitude || row.lon || 0) || null,
-            has_home: row.has_home === 'true' || row.has_home === 'YES' || row.has_home === '1',
-            is_listed: row.is_listed === 'true' || row.is_listed === 'YES' || row.is_listed === '1',
             created_at: new Date().toISOString(),
           }));
 
         if (importedLeads.length > 0) {
           const { error } = await supabase.from('leads').insert(importedLeads);
           if (!error) {
-            alert(`Imported ${importedLeads.length} leads successfully!`);
-            loadData();
-            setShowImportModal(false);
+            alert(`Imported ${importedLeads.length} leads!`);
+            setFile(null);
+            onImport();
           } else {
-            alert('Error importing leads: ' + error.message);
+            alert('Error: ' + error.message);
           }
         } else {
-          alert('No valid leads found in file');
+          alert('No valid leads found');
         }
+        setImporting(false);
       }
     });
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-navy flex items-center justify-center">
-        <div className="text-white text-lg">Loading...</div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-gray-900">
-      {/* Header */}
-      <header className="bg-slate-800 border-b border-slate-700 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => router.push('/dashboard')}
-              className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-            </button>
-            <h1 className="text-xl font-semibold text-white">Backend - Lead Management</h1>
-          </div>
-          <div className="flex items-center gap-3">
-            {selectedLeads.length > 0 && (
-              <>
-                <button
-                  onClick={deleteSelectedLeads}
-                  className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg text-sm font-medium transition flex items-center gap-2"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                  Delete ({selectedLeads.length})
-                </button>
-                <button
-                  onClick={() => setShowPushModal(true)}
-                  className="px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg text-sm font-medium transition flex items-center gap-2"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                  </svg>
-                  Push ({selectedLeads.length})
-                </button>
-              </>
-            )}
-            <button
-              onClick={() => setShowImportModal(true)}
-              className="px-4 py-2 bg-rust hover:bg-rust/80 text-white rounded-lg text-sm font-medium transition flex items-center gap-2"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-              </svg>
-              Import Leads
-            </button>
-          </div>
-        </div>
-      </header>
+    <div className="p-6 max-w-2xl">
+      <h1 className="text-2xl font-semibold text-white mb-6">Import Leads</h1>
 
-      {/* Tabs & Stats */}
-      <div className="bg-slate-800/50 border-b border-slate-700/50 px-6 py-4">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex gap-2 flex-wrap">
-            {tabs.map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-                  activeTab === tab.id
-                    ? 'bg-rust text-white'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
-                }`}
-              >
-                {tab.label} ({tab.count})
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Stats Row */}
-        <div className="flex gap-4 flex-wrap">
-          <div className="bg-slate-900/50 rounded-lg px-4 py-2 border border-slate-700/50">
-            <div className="text-2xl font-bold text-white">{stats.new}</div>
-            <div className="text-xs text-slate-400 uppercase tracking-wide">New Leads</div>
-          </div>
-          <div className="bg-slate-900/50 rounded-lg px-4 py-2 border border-slate-700/50">
-            <div className="text-2xl font-bold text-rust">{stats.qualified}</div>
-            <div className="text-xs text-slate-400 uppercase tracking-wide">Qualified</div>
-          </div>
-          <div className="bg-slate-900/50 rounded-lg px-4 py-2 border border-slate-700/50">
-            <div className="text-2xl font-bold text-white">{stats.large}</div>
-            <div className="text-xs text-slate-400 uppercase tracking-wide">50+ Acres</div>
-          </div>
-          <div className="bg-slate-900/50 rounded-lg px-4 py-2 border border-slate-700/50">
-            <div className="text-2xl font-bold text-green-400">{stats.recent}</div>
-            <div className="text-xs text-slate-400 uppercase tracking-wide">Last 24 Hours</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Leads Grid */}
-      <div className="p-6">
-        {/* Select All */}
-        <div className="flex items-center justify-between mb-4">
-          <label className="flex items-center gap-2 text-slate-400 text-sm cursor-pointer">
-            <input
-              type="checkbox"
-              checked={selectedLeads.length === filteredLeads.length && filteredLeads.length > 0}
-              onChange={selectAll}
-              className="rounded border-slate-600 bg-slate-800 text-rust focus:ring-rust"
-            />
-            Select All ({filteredLeads.length})
-          </label>
-          {selectedLeads.length > 0 && (
-            <span className="text-sm text-rust">{selectedLeads.length} selected</span>
-          )}
-        </div>
-
-        {/* Lead Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filteredLeads.map(lead => (
-            <LeadCard
-              key={lead.id}
-              lead={lead}
-              isSelected={selectedLeads.includes(lead.id)}
-              onToggleSelect={() => toggleLeadSelection(lead.id)}
-              onDelete={() => deleteLead(lead.id)}
-            />
-          ))}
-        </div>
-
-        {filteredLeads.length === 0 && (
-          <div className="text-center py-12 text-slate-400">
-            <svg className="w-16 h-16 mx-auto mb-4 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-            </svg>
-            <p>No leads found</p>
-          </div>
-        )}
-      </div>
-
-      {/* Push Modal */}
-      {showPushModal && (
-        <PushModal
-          selectedCount={selectedLeads.length}
-          users={users}
-          onClose={() => setShowPushModal(false)}
-          onPush={() => {
-            setSelectedLeads([]);
-            loadData();
-          }}
-        />
-      )}
-
-      {/* Import Modal */}
-      {showImportModal && (
-        <ImportModal
-          onClose={() => setShowImportModal(false)}
-          onImport={handleImportCSV}
-        />
-      )}
-    </div>
-  );
-}
-
-function LeadCard({ lead, isSelected, onToggleSelect, onDelete }) {
-  const getAcreageLabel = (acreage) => {
-    if (!acreage) return null;
-    if (acreage < 10) return '1-10 Acres';
-    if (acreage < 20) return '10-20 Acres';
-    if (acreage < 50) return '20-50 Acres';
-    if (acreage < 100) return '50-100 Acres';
-    return '100+ Acres';
-  };
-
-  const PIPELINE_COLORS = {
-    jv: '#8B5CF6',
-    development: '#3B82F6',
-    listing: '#22C55E',
-    capital: '#EAB308',
-    dispo: '#EF4444',
-  };
-
-  return (
-    <div className={`bg-slate-800/50 rounded-xl border transition ${
-      isSelected ? 'border-rust ring-1 ring-rust' : 'border-slate-700/50 hover:border-slate-600'
-    }`}>
-      {/* Header */}
-      <div className="p-4 border-b border-slate-700/30">
-        <div className="flex items-start justify-between">
-          <div className="flex items-start gap-3">
-            <input
-              type="checkbox"
-              checked={isSelected}
-              onChange={onToggleSelect}
-              className="mt-1 rounded border-slate-600 bg-slate-800 text-rust focus:ring-rust"
-            />
-            <div>
-              <div className="font-semibold text-white">{lead.name || 'Unknown Owner'}</div>
-              {lead.pipeline && (
-                <span
-                  className="inline-block mt-1 px-2 py-0.5 rounded text-[10px] uppercase font-medium text-white"
-                  style={{ backgroundColor: PIPELINE_COLORS[lead.pipeline] || '#666' }}
-                >
-                  {lead.pipeline}
-                </span>
-              )}
-            </div>
-          </div>
-          <div className="flex items-center gap-1">
-            {lead.stage === 'New' && (
-              <span className="px-2 py-1 bg-green-500/20 text-green-400 text-xs font-semibold rounded">NEW</span>
-            )}
-            <button
-              onClick={onDelete}
-              className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-red-500/20 rounded transition"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Property Info */}
-      <div className="p-4 space-y-2">
+      <div className="bg-slate-800/50 rounded-xl border border-slate-700/50 p-6 space-y-6">
+        {/* Target Pipeline */}
         <div>
-          <div className="text-xs text-slate-500 uppercase tracking-wide">Location</div>
-          <div className="text-white text-sm">{lead.address || 'No address'}</div>
-          <div className="text-slate-400 text-sm">{lead.county || lead.city}, {lead.state}</div>
-        </div>
-
-        {lead.acreage > 0 && (
-          <div className="text-rust font-semibold text-sm">{getAcreageLabel(lead.acreage)}</div>
-        )}
-
-        {/* Contact Info */}
-        <div className="pt-2 border-t border-slate-700/30 space-y-1">
-          {lead.email && (
-            <div className="text-sm text-slate-400 truncate">{lead.email}</div>
-          )}
-          {lead.phone && (
-            <div className="text-sm text-slate-400">{lead.phone}</div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function PushModal({ selectedCount, users, onClose, onPush }) {
-  const [pushTargets, setPushTargets] = useState({
-    calendar: false,
-    googlePPC: false,
-    facebook: false,
-    agentPipeline: false,
-    mail: false,
-    calling: false,
-  });
-  const [assignedUser, setAssignedUser] = useState('');
-
-  const handlePush = async () => {
-    alert(`Pushed ${selectedCount} lead(s) to selected channels!`);
-    onClose();
-    onPush();
-  };
-
-  const channels = [
-    { id: 'calendar', label: 'Calendar', icon: '📅', desc: 'Schedule follow-up tasks' },
-    { id: 'googlePPC', label: 'Google PPC', icon: '🔍', desc: 'Add to remarketing audience' },
-    { id: 'facebook', label: 'Facebook', icon: '📘', desc: 'Add to Facebook audience' },
-    { id: 'agentPipeline', label: 'Agent Pipeline', icon: '👥', desc: 'Assign to agent for outreach' },
-    { id: 'mail', label: 'Mail Campaign', icon: '📬', desc: 'Add to direct mail list' },
-    { id: 'calling', label: 'Calling Queue', icon: '📞', desc: 'Add to cold calling list' },
-  ];
-
-  return (
-    <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-lg" onClick={e => e.stopPropagation()}>
-        <div className="p-6 border-b border-slate-700">
-          <h2 className="text-xl font-semibold text-white">Push Leads to Channels</h2>
-          <p className="text-slate-400 text-sm mt-1">
-            Push {selectedCount} selected lead{selectedCount > 1 ? 's' : ''} to marketing and sales channels
-          </p>
-        </div>
-
-        <div className="p-6 space-y-3">
-          {channels.map(channel => (
-            <label
-              key={channel.id}
-              className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition ${
-                pushTargets[channel.id] ? 'bg-rust/20 border border-rust' : 'bg-slate-800/50 border border-transparent hover:bg-slate-800'
-              }`}
-            >
-              <input
-                type="checkbox"
-                checked={pushTargets[channel.id]}
-                onChange={(e) => setPushTargets({ ...pushTargets, [channel.id]: e.target.checked })}
-                className="rounded border-slate-600 bg-slate-800 text-rust focus:ring-rust"
-              />
-              <span className="text-xl">{channel.icon}</span>
-              <div>
-                <div className="text-white font-medium">{channel.label}</div>
-                <div className="text-slate-400 text-xs">{channel.desc}</div>
-              </div>
-            </label>
-          ))}
-
-          {pushTargets.agentPipeline && (
-            <div className="pt-2">
-              <label className="text-sm text-slate-400 block mb-2">Assign to Agent</label>
-              <select
-                value={assignedUser}
-                onChange={(e) => setAssignedUser(e.target.value)}
-                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white"
-              >
-                <option value="">Select agent...</option>
-                {users.map(user => (
-                  <option key={user.id} value={user.id}>{user.name || user.email}</option>
-                ))}
-              </select>
-            </div>
-          )}
-        </div>
-
-        <div className="p-6 border-t border-slate-700 flex justify-end gap-3">
-          <button onClick={onClose} className="px-4 py-2 text-slate-400 hover:text-white transition">
-            Cancel
-          </button>
-          <button
-            onClick={handlePush}
-            disabled={!Object.values(pushTargets).some(v => v)}
-            className="px-4 py-2 bg-rust hover:bg-rust/80 disabled:bg-slate-700 disabled:text-slate-500 text-white rounded-lg transition"
+          <label className="text-sm text-slate-400 block mb-2">Import to Pipeline</label>
+          <select
+            value={targetPipeline}
+            onChange={(e) => setTargetPipeline(e.target.value)}
+            className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white"
           >
-            Push Leads
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ImportModal({ onClose, onImport }) {
-  const [file, setFile] = useState(null);
-
-  return (
-    <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-md" onClick={e => e.stopPropagation()}>
-        <div className="p-6 border-b border-slate-700">
-          <h2 className="text-xl font-semibold text-white">Import Leads</h2>
+            <optgroup label="Pipelines">
+              {PIPELINES.map(p => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </optgroup>
+            <optgroup label="Marketing Inbound">
+              {MARKETING_PIPELINES.map(p => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </optgroup>
+          </select>
         </div>
 
-        <div className="p-6 space-y-4">
-          <div>
-            <input
-              type="file"
-              accept=".csv"
-              onChange={(e) => setFile(e.target.files[0])}
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:bg-rust file:text-white file:cursor-pointer"
-            />
-          </div>
-          <p className="text-xs text-slate-400">
-            CSV columns: name, address, city, state, county, acreage, phone, email, lat, lng, pipeline
-          </p>
+        {/* File Upload */}
+        <div>
+          <label className="text-sm text-slate-400 block mb-2">CSV File</label>
+          <input
+            type="file"
+            accept=".csv"
+            onChange={(e) => setFile(e.target.files[0])}
+            className="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-white file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:bg-rust file:text-white file:cursor-pointer"
+          />
         </div>
 
-        <div className="p-6 border-t border-slate-700 flex justify-end gap-3">
-          <button onClick={onClose} className="px-4 py-2 text-slate-400 hover:text-white transition">
-            Cancel
-          </button>
-          <button
-            onClick={() => file && onImport(file)}
-            disabled={!file}
-            className="px-4 py-2 bg-rust hover:bg-rust/80 disabled:bg-slate-700 disabled:text-slate-500 text-white rounded-lg transition"
-          >
-            Import
-          </button>
+        <div className="text-xs text-slate-500">
+          CSV columns: name, address, city, state, county, acreage, phone, email, lat, lng
         </div>
+
+        <button
+          onClick={handleImport}
+          disabled={!file || importing}
+          className="w-full py-3 bg-rust hover:bg-rust/80 disabled:bg-slate-700 text-white rounded-lg font-medium transition"
+        >
+          {importing ? 'Importing...' : 'Import Leads'}
+        </button>
       </div>
     </div>
   );
