@@ -111,10 +111,16 @@ export default function BackendPage() {
         {/* Navigation */}
         <nav className="flex-1 p-3 space-y-1">
           <SidebarItem
-            icon="📊"
+            icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>}
             label="Overview"
             active={activeSection === 'overview'}
             onClick={() => setActiveSection('overview')}
+          />
+          <SidebarItem
+            icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4v16m8-8H4" /></svg>}
+            label="Add Lead"
+            active={activeSection === 'addlead'}
+            onClick={() => setActiveSection('addlead')}
           />
 
           <div className="pt-4 pb-2">
@@ -149,7 +155,7 @@ export default function BackendPage() {
             <div className="text-xs text-slate-500 uppercase tracking-wide px-3">Tools</div>
           </div>
           <SidebarItem
-            icon="📥"
+            icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>}
             label="Import Leads"
             active={activeSection === 'import'}
             onClick={() => setActiveSection('import')}
@@ -202,6 +208,10 @@ export default function BackendPage() {
 
         {activeSection === 'import' && (
           <ImportSection onImport={loadData} />
+        )}
+
+        {activeSection === 'addlead' && (
+          <AddLeadSection onSave={loadData} />
         )}
       </div>
     </div>
@@ -489,6 +499,353 @@ function LeadCard({ lead, isSelected, onToggleSelect, onDelete, compact }) {
           {lead.email && <span className="truncate">{lead.email}</span>}
         </div>
       )}
+    </div>
+  );
+}
+
+function AddLeadSection({ onSave }) {
+  const [formData, setFormData] = useState({
+    name: '', address: '', city: '', state: 'TX', county: '',
+    acreage: '', phone: '', email: '', pipeline: 'listing', stage: 'New',
+    lat: null, lng: null, boundary: null,
+    parcel_number: '', contact_name: '', notes: '',
+    has_home: false, is_listed: false,
+    is_agent_lead: false, agent_name: '', agent_phone: '', agent_email: '',
+  });
+  const [kmlFileName, setKmlFileName] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const allPipelines = [...PIPELINES, ...MARKETING_PIPELINES];
+
+  const parseKML = (kmlText) => {
+    const parser = new DOMParser();
+    const kml = parser.parseFromString(kmlText, 'text/xml');
+    const coords = kml.querySelector('coordinates');
+    if (coords) {
+      const coordText = coords.textContent.trim();
+      const points = coordText.split(/\s+/).map(p => {
+        const [lng, lat] = p.split(',').map(Number);
+        return [lng, lat];
+      }).filter(p => !isNaN(p[0]) && !isNaN(p[1]));
+      if (points.length > 0) {
+        const centerLat = points.reduce((sum, p) => sum + p[1], 0) / points.length;
+        const centerLng = points.reduce((sum, p) => sum + p[0], 0) / points.length;
+        return {
+          lat: centerLat,
+          lng: centerLng,
+          boundary: { type: 'Polygon', coordinates: [points.map(p => [p[0], p[1]])] }
+        };
+      }
+    }
+    return null;
+  };
+
+  const handleKMLUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setKmlFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const result = parseKML(event.target.result);
+      if (result) {
+        setFormData(prev => ({
+          ...prev,
+          lat: result.lat,
+          lng: result.lng,
+          boundary: JSON.stringify(result.boundary)
+        }));
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!formData.name && !formData.address) {
+      alert('Please enter owner name or property address');
+      return;
+    }
+    setSaving(true);
+
+    const leadData = {
+      ...formData,
+      acreage: formData.acreage ? parseFloat(formData.acreage) : null,
+      created_at: new Date().toISOString(),
+    };
+
+    const { error } = await supabase.from('leads').insert([leadData]);
+    if (error) {
+      alert('Error: ' + error.message);
+    } else {
+      // Reset form
+      setFormData({
+        name: '', address: '', city: '', state: 'TX', county: '',
+        acreage: '', phone: '', email: '', pipeline: 'listing', stage: 'New',
+        lat: null, lng: null, boundary: null,
+        parcel_number: '', contact_name: '', notes: '',
+        has_home: false, is_listed: false,
+        is_agent_lead: false, agent_name: '', agent_phone: '', agent_email: '',
+      });
+      setKmlFileName('');
+      onSave();
+      alert('Lead added successfully');
+    }
+    setSaving(false);
+  };
+
+  return (
+    <div className="p-6 max-w-3xl">
+      <h1 className="text-2xl font-semibold text-white mb-6">Add Lead</h1>
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Property Information */}
+        <div className="bg-slate-800/50 rounded-xl border border-slate-700/50 p-6">
+          <h2 className="text-lg font-medium text-white mb-4">Property Information</h2>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm text-slate-400 block mb-1">Owner Name</label>
+              <input
+                type="text"
+                value={formData.name}
+                onChange={(e) => setFormData({...formData, name: e.target.value})}
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white"
+                placeholder="John Smith"
+              />
+            </div>
+            <div>
+              <label className="text-sm text-slate-400 block mb-1">Property Address</label>
+              <input
+                type="text"
+                value={formData.address}
+                onChange={(e) => setFormData({...formData, address: e.target.value})}
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white"
+                placeholder="123 Main St"
+              />
+            </div>
+            <div>
+              <label className="text-sm text-slate-400 block mb-1">City</label>
+              <input
+                type="text"
+                value={formData.city}
+                onChange={(e) => setFormData({...formData, city: e.target.value})}
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm text-slate-400 block mb-1">State</label>
+                <input
+                  type="text"
+                  value={formData.state}
+                  onChange={(e) => setFormData({...formData, state: e.target.value})}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white"
+                />
+              </div>
+              <div>
+                <label className="text-sm text-slate-400 block mb-1">County</label>
+                <input
+                  type="text"
+                  value={formData.county}
+                  onChange={(e) => setFormData({...formData, county: e.target.value})}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="text-sm text-slate-400 block mb-1">Parcel #</label>
+              <input
+                type="text"
+                value={formData.parcel_number}
+                onChange={(e) => setFormData({...formData, parcel_number: e.target.value})}
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white"
+              />
+            </div>
+            <div>
+              <label className="text-sm text-slate-400 block mb-1">Acreage</label>
+              <input
+                type="number"
+                step="0.01"
+                value={formData.acreage}
+                onChange={(e) => setFormData({...formData, acreage: e.target.value})}
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white"
+              />
+            </div>
+            <div className="col-span-2 flex gap-6">
+              <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.has_home}
+                  onChange={(e) => setFormData({...formData, has_home: e.target.checked})}
+                  className="rounded border-slate-600 bg-slate-800 text-rust"
+                />
+                Has Home
+              </label>
+              <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.is_listed}
+                  onChange={(e) => setFormData({...formData, is_listed: e.target.checked})}
+                  className="rounded border-slate-600 bg-slate-800 text-rust"
+                />
+                Currently Listed
+              </label>
+            </div>
+          </div>
+        </div>
+
+        {/* KML Upload */}
+        <div className="bg-slate-800/50 rounded-xl border border-slate-700/50 p-6">
+          <h2 className="text-lg font-medium text-white mb-4">Parcel Boundary (KML)</h2>
+          <div>
+            <input
+              type="file"
+              accept=".kml"
+              onChange={handleKMLUpload}
+              className="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-white file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:bg-rust file:text-white file:cursor-pointer"
+            />
+            {kmlFileName && (
+              <div className="mt-2 text-sm text-green-400">Loaded: {kmlFileName}</div>
+            )}
+            {formData.lat && formData.lng && (
+              <div className="mt-2 text-xs text-slate-400">
+                Coordinates: {formData.lat.toFixed(6)}, {formData.lng.toFixed(6)}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Contact Information */}
+        <div className="bg-slate-800/50 rounded-xl border border-slate-700/50 p-6">
+          <h2 className="text-lg font-medium text-white mb-4">Contact Information</h2>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm text-slate-400 block mb-1">Contact Name</label>
+              <input
+                type="text"
+                value={formData.contact_name}
+                onChange={(e) => setFormData({...formData, contact_name: e.target.value})}
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white"
+              />
+            </div>
+            <div>
+              <label className="text-sm text-slate-400 block mb-1">Phone</label>
+              <input
+                type="tel"
+                value={formData.phone}
+                onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white"
+              />
+            </div>
+            <div className="col-span-2">
+              <label className="text-sm text-slate-400 block mb-1">Email</label>
+              <input
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({...formData, email: e.target.value})}
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white"
+              />
+            </div>
+            <div className="col-span-2">
+              <label className="text-sm text-slate-400 block mb-1">Notes</label>
+              <textarea
+                value={formData.notes}
+                onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white h-24"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Agent Lead */}
+        <div className="bg-slate-800/50 rounded-xl border border-slate-700/50 p-6">
+          <label className="flex items-center gap-3 mb-4 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={formData.is_agent_lead}
+              onChange={(e) => setFormData({...formData, is_agent_lead: e.target.checked})}
+              className="rounded border-slate-600 bg-slate-800 text-rust w-5 h-5"
+            />
+            <span className="text-lg font-medium text-white">Agent Lead</span>
+          </label>
+          {formData.is_agent_lead && (
+            <div className="grid grid-cols-3 gap-4 pt-2">
+              <div>
+                <label className="text-sm text-slate-400 block mb-1">Agent Name</label>
+                <input
+                  type="text"
+                  value={formData.agent_name}
+                  onChange={(e) => setFormData({...formData, agent_name: e.target.value})}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white"
+                />
+              </div>
+              <div>
+                <label className="text-sm text-slate-400 block mb-1">Agent Phone</label>
+                <input
+                  type="tel"
+                  value={formData.agent_phone}
+                  onChange={(e) => setFormData({...formData, agent_phone: e.target.value})}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white"
+                />
+              </div>
+              <div>
+                <label className="text-sm text-slate-400 block mb-1">Agent Email</label>
+                <input
+                  type="email"
+                  value={formData.agent_email}
+                  onChange={(e) => setFormData({...formData, agent_email: e.target.value})}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Pipeline Assignment */}
+        <div className="bg-slate-800/50 rounded-xl border border-slate-700/50 p-6">
+          <h2 className="text-lg font-medium text-white mb-4">Pipeline Assignment</h2>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm text-slate-400 block mb-1">Pipeline</label>
+              <select
+                value={formData.pipeline}
+                onChange={(e) => setFormData({...formData, pipeline: e.target.value})}
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white"
+              >
+                <optgroup label="Pipelines">
+                  {PIPELINES.map(p => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </optgroup>
+                <optgroup label="Marketing Inbound">
+                  {MARKETING_PIPELINES.map(p => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </optgroup>
+              </select>
+            </div>
+            <div>
+              <label className="text-sm text-slate-400 block mb-1">Stage</label>
+              <select
+                value={formData.stage}
+                onChange={(e) => setFormData({...formData, stage: e.target.value})}
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white"
+              >
+                {STAGES.map(s => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          disabled={saving}
+          className="w-full py-3 bg-rust hover:bg-rust/80 disabled:bg-slate-700 text-white rounded-lg font-medium transition"
+        >
+          {saving ? 'Saving...' : 'Add Lead'}
+        </button>
+      </form>
     </div>
   );
 }

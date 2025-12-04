@@ -195,7 +195,8 @@ export default function Dashboard() {
 
   return (
     <div className="h-screen bg-navy flex overflow-hidden">
-      {/* Sidebar */}
+      {/* Sidebar - hide on map view */}
+      {(activeView !== 'map' || showBackend) && (
       <div className={`bg-navy border-r border-white/10 flex flex-col transition-all duration-300 ${sidebarCollapsed ? 'w-16' : 'w-64'}`}>
         {/* Logo */}
         <div className="p-5 border-b border-white/10 flex items-center justify-between">
@@ -269,6 +270,7 @@ export default function Dashboard() {
           />
         </div>
       </div>
+      )}
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">

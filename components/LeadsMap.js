@@ -7,11 +7,11 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
 const PIPELINE_COLORS = {
-  jv: '#8B5CF6',
-  development: '#3B82F6',
-  listing: '#22C55E',
-  capital: '#EAB308',
-  dispo: '#EF4444',
+  jv: '#6B7280',
+  development: '#6B7280',
+  listing: '#6B7280',
+  capital: '#6B7280',
+  dispo: '#6B7280',
 };
 
 const PIPELINE_NAMES = {
@@ -36,6 +36,8 @@ export default function LeadsMap({ leads = [], onSelectLead }) {
   const markersRef = useRef([]);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [selectedLead, setSelectedLead] = useState(null);
+  const [hoveredLead, setHoveredLead] = useState(null);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [is3D, setIs3D] = useState(false);
   const [toolsExpanded, setToolsExpanded] = useState(false);
   const [showTopography, setShowTopography] = useState(false);
@@ -280,10 +282,117 @@ export default function LeadsMap({ leads = [], onSelectLead }) {
     if (source) source.setData({ type: 'FeatureCollection', features: [] });
   };
 
+  // Handle clicking a lead in sidebar
+  const handleLeadClick = (lead) => {
+    setSelectedLead(lead);
+    if (onSelectLead) onSelectLead(lead);
+    if (map.current && lead.lat && lead.lng) {
+      map.current.flyTo({
+        center: [lead.lng, lead.lat],
+        zoom: 15,
+        duration: 1000,
+      });
+      showParcelBoundary(lead);
+    }
+  };
+
   return (
-    <div className="relative w-full h-full">
+    <div className="relative w-full h-full flex">
+      {/* Leads Sidebar */}
+      <div className={`h-full bg-slate-900 border-r border-slate-700/50 flex flex-col transition-all duration-300 ${sidebarCollapsed ? 'w-0 overflow-hidden' : 'w-72'}`}>
+        {/* Header */}
+        <div className="p-4 border-b border-slate-700/50">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-white font-semibold text-lg">
+              {filteredLeads.length} {filteredLeads.length === 1 ? 'Lead' : 'Leads'}
+            </h2>
+            <button
+              onClick={() => setSidebarCollapsed(true)}
+              className="p-1 text-slate-400 hover:text-white transition"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        {/* Leads List */}
+        <div className="flex-1 overflow-y-auto p-3 space-y-2">
+          {filteredLeads.length === 0 ? (
+            <div className="text-center py-8 text-slate-400">
+              <p className="text-sm">No leads found</p>
+            </div>
+          ) : (
+            filteredLeads.map(lead => (
+              <div
+                key={lead.id}
+                onClick={() => handleLeadClick(lead)}
+                onMouseEnter={() => setHoveredLead(lead.id)}
+                onMouseLeave={() => setHoveredLead(null)}
+                className={`bg-slate-800/50 rounded-lg overflow-hidden cursor-pointer transition border ${
+                  selectedLead?.id === lead.id
+                    ? 'border-rust ring-1 ring-rust'
+                    : hoveredLead === lead.id
+                      ? 'border-slate-600'
+                      : 'border-transparent hover:border-slate-600'
+                }`}
+              >
+                <div className="flex gap-3 p-2">
+                  {/* Satellite Thumbnail */}
+                  <div className="w-20 h-14 rounded overflow-hidden flex-shrink-0 bg-slate-700">
+                    {lead.lat && lead.lng ? (
+                      <img
+                        src={getSatelliteThumbnail(lead.lat, lead.lng)}
+                        alt=""
+                        className="w-full h-full object-cover"
+                        onError={(e) => e.target.style.display = 'none'}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-slate-500">
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Lead Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="text-white font-medium text-sm truncate">
+                      {lead.name || 'Unknown Owner'}
+                    </div>
+                    <div className="text-xs text-slate-400 mt-0.5 truncate">
+                      {lead.county ? `${lead.county} County, ${lead.state}` : `${lead.city || ''}, ${lead.state || ''}`}
+                    </div>
+                    <div className="flex items-center gap-3 mt-1.5">
+                      {lead.acreage > 0 && (
+                        <span className="text-xs text-rust font-medium">{lead.acreage} ac</span>
+                      )}
+                      <span className="text-xs text-slate-500">{lead.stage}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* Sidebar Toggle (when collapsed) */}
+      {sidebarCollapsed && (
+        <button
+          onClick={() => setSidebarCollapsed(false)}
+          className="absolute left-2 top-4 z-20 p-2 bg-slate-900/90 hover:bg-slate-800 text-white rounded-lg border border-slate-700/50 transition"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+          </svg>
+        </button>
+      )}
+
       {/* Map Container */}
-      <div className="w-full h-full relative">
+      <div className="flex-1 relative">
         <div ref={mapContainer} className="w-full h-full" />
 
         {/* 3D Toggle */}
