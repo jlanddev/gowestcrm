@@ -34,7 +34,7 @@ const OUTBOUND_PIPELINES = [
   { id: 'agent_partners', name: 'Agent Partners', color: '#6B7280' },
 ];
 
-const STAGES = ['New', 'Contacted', 'Qualified', 'Negotiating', 'Under Contract', 'Closed', 'Lost'];
+const STAGES = ['New', 'Spoke With', 'Site Visit', 'Proposal Made', 'Under Contract', 'Closed'];
 
 export default function BackendPage() {
   const [user, setUser] = useState(null);

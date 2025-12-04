@@ -18,7 +18,7 @@ const PIPELINES = [
   { id: 'dispo', name: 'Dispo Leads', color: '#EF4444' },
 ];
 
-const STAGES = ['New', 'Contacted', 'Qualified', 'Negotiating', 'Under Contract', 'Closed', 'Lost'];
+const STAGES = ['New', 'Spoke With', 'Site Visit', 'Proposal Made', 'Under Contract', 'Closed'];
 
 // SVG Icons
 const Icons = {
