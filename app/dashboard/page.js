@@ -10,11 +10,11 @@ const LeadsMap = dynamic(() => import('@/components/LeadsMap'), {
   loading: () => <div className="w-full h-full bg-gray-900 animate-pulse" />
 });
 
+// Land pipelines for map view (excludes Capital Partners which is backend-only)
 const PIPELINES = [
   { id: 'jv', name: 'JV Development', color: '#8B5CF6' },
   { id: 'development', name: 'Developments', color: '#3B82F6' },
   { id: 'listing', name: 'Listing Leads', color: '#22C55E' },
-  { id: 'capital', name: 'Capital Partners', color: '#EAB308' },
   { id: 'dispo', name: 'Dispo Leads', color: '#EF4444' },
 ];
 
@@ -173,6 +173,14 @@ export default function Dashboard() {
     loadData();
   };
 
+  const deleteLead = async (leadId) => {
+    if (confirm('Are you sure you want to delete this lead?')) {
+      await supabase.from('leads').delete().eq('id', leadId);
+      setSelectedLead(null);
+      loadData();
+    }
+  };
+
   const filteredLeads = activePipeline === 'all'
     ? leads
     : leads.filter(l => l.pipeline === activePipeline);
@@ -230,9 +238,9 @@ export default function Dashboard() {
             <NavItem
               icon={Icons.grid}
               label="Backend"
-              active={showBackend && backendView === 'backend'}
+              active={false}
               collapsed={sidebarCollapsed}
-              onClick={() => { setShowBackend(true); setBackendView('backend'); }}
+              onClick={() => router.push('/backend')}
             />
             <NavItem
               icon={Icons.calendar}
@@ -371,16 +379,6 @@ export default function Dashboard() {
             <LeadsTable leads={leads} onSelectLead={setSelectedLead} pipelines={PIPELINES} />
           )}
 
-          {showBackend && backendView === 'backend' && (
-            <BackendView
-              leads={leads}
-              users={users}
-              pipelines={PIPELINES}
-              currentUser={user}
-              onLeadUpdate={loadData}
-            />
-          )}
-
           {showBackend && backendView === 'calendar' && (
             <CalendarView
               tasks={tasks}
@@ -412,6 +410,7 @@ export default function Dashboard() {
           onClose={() => setSelectedLead(null)}
           onUpdatePipeline={updateLeadPipeline}
           onUpdateStage={updateLeadStage}
+          onDelete={deleteLead}
         />
       )}
 
@@ -497,7 +496,7 @@ function LeadsTable({ leads, onSelectLead, pipelines }) {
   );
 }
 
-function LeadDetailPanel({ lead, pipelines, stages, onClose, onUpdatePipeline, onUpdateStage }) {
+function LeadDetailPanel({ lead, pipelines, stages, onClose, onUpdatePipeline, onUpdateStage, onDelete }) {
   return (
     <div className="fixed inset-0 bg-black/50 z-50" onClick={onClose}>
       <div
@@ -507,9 +506,20 @@ function LeadDetailPanel({ lead, pipelines, stages, onClose, onUpdatePipeline, o
         <div className="p-6">
           <div className="flex justify-between items-start mb-6">
             <h2 className="text-xl font-semibold text-white">{lead.name || 'Lead Details'}</h2>
-            <button onClick={onClose} className="text-white/40 hover:text-white transition">
-              {Icons.close}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => onDelete(lead.id)}
+                className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/20 rounded-lg transition"
+                title="Delete Lead"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
+              <button onClick={onClose} className="text-white/40 hover:text-white transition">
+                {Icons.close}
+              </button>
+            </div>
           </div>
 
           <div className="space-y-5">
@@ -577,6 +587,9 @@ function AddLeadModal({ pipelines, stages, onClose, onSave }) {
     name: '', address: '', city: '', state: 'TX', county: '',
     acreage: '', phone: '', email: '', pipeline: 'listing', stage: 'New',
     lat: null, lng: null, boundary: null,
+    parcel_number: '', contact_name: '', notes: '',
+    has_home: false, is_listed: false,
+    is_agent_lead: false, agent_name: '', agent_phone: '', agent_email: '',
   });
   const [kmlFileName, setKmlFileName] = useState('');
 
@@ -650,12 +663,27 @@ function AddLeadModal({ pipelines, stages, onClose, onSave }) {
       return;
     }
 
+    // Insert the lead
     const { error } = await supabase.from('leads').insert([{
       ...formData,
       acreage: parseFloat(formData.acreage) || 0,
       boundary: formData.boundary ? JSON.stringify(formData.boundary) : null,
       created_at: new Date().toISOString(),
     }]);
+
+    // If agent lead, also add agent to agent pipeline
+    if (!error && formData.is_agent_lead && formData.agent_name) {
+      await supabase.from('leads').insert([{
+        name: formData.agent_name,
+        phone: formData.agent_phone,
+        email: formData.agent_email,
+        pipeline: 'capital', // Agent pipeline
+        stage: 'New',
+        notes: `Agent for lead: ${formData.name || formData.address}`,
+        created_at: new Date().toISOString(),
+      }]);
+    }
+
     if (!error) onSave();
   };
 
@@ -705,8 +733,10 @@ function AddLeadModal({ pipelines, stages, onClose, onSave }) {
           </div>
 
           <div className="grid grid-cols-2 gap-4">
+            {/* Property Info Section */}
+            <div className="col-span-2 text-xs text-rust font-semibold uppercase tracking-wide pt-2">Property Info</div>
             <div className="col-span-2">
-              <label className="text-sm text-white/60 block mb-1">Name</label>
+              <label className="text-sm text-white/60 block mb-1">Owner Name</label>
               <input
                 type="text"
                 value={formData.name}
@@ -716,7 +746,7 @@ function AddLeadModal({ pipelines, stages, onClose, onSave }) {
               />
             </div>
             <div className="col-span-2">
-              <label className="text-sm text-white/60 block mb-1">Address</label>
+              <label className="text-sm text-white/60 block mb-1">Property Address</label>
               <input
                 type="text"
                 value={formData.address}
@@ -753,12 +783,54 @@ function AddLeadModal({ pipelines, stages, onClose, onSave }) {
               />
             </div>
             <div>
+              <label className="text-sm text-white/60 block mb-1">Parcel #</label>
+              <input
+                type="text"
+                value={formData.parcel_number}
+                onChange={e => setFormData({...formData, parcel_number: e.target.value})}
+                className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white placeholder-white/30"
+              />
+            </div>
+            <div>
               <label className="text-sm text-white/60 block mb-1">Acreage</label>
               <input
                 type="number"
                 value={formData.acreage}
                 onChange={e => setFormData({...formData, acreage: e.target.value})}
                 className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white placeholder-white/30"
+              />
+            </div>
+            <div className="flex items-center gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.has_home}
+                  onChange={e => setFormData({...formData, has_home: e.target.checked})}
+                  className="rounded border-white/20 bg-white/10 text-rust focus:ring-rust"
+                />
+                <span className="text-sm text-white/60">Has Home</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.is_listed}
+                  onChange={e => setFormData({...formData, is_listed: e.target.checked})}
+                  className="rounded border-white/20 bg-white/10 text-rust focus:ring-rust"
+                />
+                <span className="text-sm text-white/60">Listed</span>
+              </label>
+            </div>
+
+            {/* Contact Info Section */}
+            <div className="col-span-2 text-xs text-rust font-semibold uppercase tracking-wide pt-4 border-t border-white/10 mt-2">Contact Info</div>
+            <div className="col-span-2">
+              <label className="text-sm text-white/60 block mb-1">Contact Name</label>
+              <input
+                type="text"
+                value={formData.contact_name}
+                onChange={e => setFormData({...formData, contact_name: e.target.value})}
+                className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white placeholder-white/30"
+                placeholder="If different from owner"
               />
             </div>
             <div>
@@ -779,6 +851,66 @@ function AddLeadModal({ pipelines, stages, onClose, onSave }) {
                 className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white placeholder-white/30"
               />
             </div>
+            <div className="col-span-2">
+              <label className="text-sm text-white/60 block mb-1">Notes / Issue Description</label>
+              <textarea
+                value={formData.notes}
+                onChange={e => setFormData({...formData, notes: e.target.value})}
+                className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white placeholder-white/30 h-20 resize-none"
+                placeholder="Add any notes..."
+              />
+            </div>
+
+            {/* Agent Lead Section */}
+            <div className="col-span-2 pt-4 border-t border-white/10 mt-2">
+              <label className="flex items-center gap-3 cursor-pointer p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+                <input
+                  type="checkbox"
+                  checked={formData.is_agent_lead}
+                  onChange={e => setFormData({...formData, is_agent_lead: e.target.checked})}
+                  className="rounded border-yellow-500/50 bg-white/10 text-yellow-500 focus:ring-yellow-500"
+                />
+                <div>
+                  <span className="text-sm text-yellow-400 font-medium">Agent Lead</span>
+                  <p className="text-xs text-white/40">Check if this lead came from an agent</p>
+                </div>
+              </label>
+            </div>
+            {formData.is_agent_lead && (
+              <>
+                <div className="col-span-2">
+                  <label className="text-sm text-white/60 block mb-1">Agent Name</label>
+                  <input
+                    type="text"
+                    value={formData.agent_name}
+                    onChange={e => setFormData({...formData, agent_name: e.target.value})}
+                    className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white placeholder-white/30"
+                    placeholder="Agent's full name"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-white/60 block mb-1">Agent Phone</label>
+                  <input
+                    type="tel"
+                    value={formData.agent_phone}
+                    onChange={e => setFormData({...formData, agent_phone: e.target.value})}
+                    className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white placeholder-white/30"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-white/60 block mb-1">Agent Email</label>
+                  <input
+                    type="email"
+                    value={formData.agent_email}
+                    onChange={e => setFormData({...formData, agent_email: e.target.value})}
+                    className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white placeholder-white/30"
+                  />
+                </div>
+              </>
+            )}
+
+            {/* Pipeline & Stage Section */}
+            <div className="col-span-2 text-xs text-rust font-semibold uppercase tracking-wide pt-4 border-t border-white/10 mt-2">Pipeline</div>
             <div>
               <label className="text-sm text-white/60 block mb-1">Pipeline</label>
               <select
