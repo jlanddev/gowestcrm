@@ -3,8 +3,11 @@
 import { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+
+const STATUS_OPTIONS = ['New', 'Spoke With', 'Site Visit', 'Proposal Made', 'Under Contract', 'Closed'];
 
 const PIPELINE_COLORS = {
   jv: '#1e3a5f',
@@ -45,7 +48,8 @@ const getSatelliteThumbnail = (lat, lng, boundary = null) => {
   return `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/${lng},${lat},15,0/80x60@2x?padding=10&logo=false&attribution=false&access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`;
 };
 
-export default function LeadsMap({ leads = [], onSelectLead, onGoToBackend }) {
+export default function LeadsMap({ leads = [], onSelectLead, onGoToBackend, onLeadUpdate }) {
+  const supabase = createClientComponentClient();
   const mapContainer = useRef(null);
   const map = useRef(null);
   const markersRef = useRef([]);
@@ -62,6 +66,16 @@ export default function LeadsMap({ leads = [], onSelectLead, onGoToBackend }) {
   const [drawMode, setDrawMode] = useState(false);
   const [filterPipeline, setFilterPipeline] = useState('all');
   const [filterStage, setFilterStage] = useState('all');
+
+  // Update lead stage in database
+  const updateLeadStage = async (leadId, newStage, e) => {
+    e.stopPropagation();
+    const { error } = await supabase
+      .from('leads')
+      .update({ stage: newStage })
+      .eq('id', leadId);
+    if (!error && onLeadUpdate) onLeadUpdate();
+  };
 
   // Initialize map
   useEffect(() => {
@@ -527,7 +541,16 @@ export default function LeadsMap({ leads = [], onSelectLead, onGoToBackend }) {
                       {lead.acreage > 0 && (
                         <span className="text-rust text-sm font-medium">{lead.acreage} ac</span>
                       )}
-                      <span className="text-white/30 text-xs">{lead.stage}</span>
+                      <select
+                        value={lead.stage}
+                        onChange={(e) => updateLeadStage(lead.id, e.target.value, e)}
+                        onClick={(e) => e.stopPropagation()}
+                        className="bg-slate-700 text-white/70 text-xs px-2 py-1 rounded border-none outline-none cursor-pointer"
+                      >
+                        {STATUS_OPTIONS.map(status => (
+                          <option key={status} value={status}>{status}</option>
+                        ))}
+                      </select>
                     </div>
                   </div>
 
@@ -756,28 +779,6 @@ export default function LeadsMap({ leads = [], onSelectLead, onGoToBackend }) {
                 )}
               </div>
             )}
-
-            {/* Status Checkboxes */}
-            <div className="py-3 border-t border-slate-600 space-y-2">
-              <div className="flex items-center gap-3">
-                <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${selectedLead.spoke_with ? 'bg-rust border-rust' : 'border-slate-500'}`}>
-                  {selectedLead.spoke_with && <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>}
-                </div>
-                <span className="text-white text-sm">Spoke With</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${selectedLead.site_visit ? 'bg-rust border-rust' : 'border-slate-500'}`}>
-                  {selectedLead.site_visit && <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>}
-                </div>
-                <span className="text-white text-sm">Site Visit</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${selectedLead.proposal_made ? 'bg-rust border-rust' : 'border-slate-500'}`}>
-                  {selectedLead.proposal_made && <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>}
-                </div>
-                <span className="text-white text-sm">Proposal Made</span>
-              </div>
-            </div>
 
             {/* Notes */}
             {selectedLead.notes && (

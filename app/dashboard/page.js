@@ -310,6 +310,7 @@ export default function Dashboard() {
               onSelectLead={setSelectedLead}
               pipelines={PIPELINES}
               onGoToBackend={() => router.push('/backend')}
+              onLeadUpdate={loadData}
             />
           )}
 
