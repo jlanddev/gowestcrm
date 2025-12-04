@@ -272,31 +272,33 @@ export default function Dashboard() {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Header */}
-        <header className="bg-white/5 backdrop-blur border-b border-white/10 px-6 py-3 flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            {activeView !== 'map' && !showBackend && (
-              <h1 className="text-xl font-medium text-white tracking-wide">
-                {activeView === 'pipelines' ? 'Pipelines' : 'All Leads'}
-              </h1>
-            )}
-            {showBackend && (
-              <h1 className="text-xl font-medium text-white tracking-wide">
-                {backendView === 'calendar' ? 'Calendar' : backendView === 'tasks' ? 'Tasks' : 'Backend'}
-              </h1>
-            )}
-            <span className="text-white/40 text-sm">{leads.length} {leads.length === 1 ? 'lead' : 'leads'}</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setShowAddLeadModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-rust hover:bg-rust/80 text-white rounded-lg text-sm transition"
-            >
-              {Icons.plus}
-              <span>Add Lead</span>
-            </button>
-          </div>
-        </header>
+        {/* Header - only show when not on map view */}
+        {(activeView !== 'map' || showBackend) && (
+          <header className="bg-white/5 backdrop-blur border-b border-white/10 px-6 py-3 flex justify-between items-center">
+            <div className="flex items-center gap-4">
+              {activeView !== 'map' && !showBackend && (
+                <h1 className="text-xl font-medium text-white tracking-wide">
+                  {activeView === 'pipelines' ? 'Pipelines' : 'All Leads'}
+                </h1>
+              )}
+              {showBackend && (
+                <h1 className="text-xl font-medium text-white tracking-wide">
+                  {backendView === 'calendar' ? 'Calendar' : backendView === 'tasks' ? 'Tasks' : 'Backend'}
+                </h1>
+              )}
+              <span className="text-white/40 text-sm">{leads.length} {leads.length === 1 ? 'lead' : 'leads'}</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShowAddLeadModal(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-rust hover:bg-rust/80 text-white rounded-lg text-sm transition"
+              >
+                {Icons.plus}
+                <span>Add Lead</span>
+              </button>
+            </div>
+          </header>
+        )}
 
         {/* Content Area */}
         <div className="flex-1 overflow-hidden">

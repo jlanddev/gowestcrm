@@ -36,7 +36,6 @@ export default function LeadsMap({ leads = [], onSelectLead }) {
   const markersRef = useRef([]);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [selectedLead, setSelectedLead] = useState(null);
-  const [hoveredLead, setHoveredLead] = useState(null);
   const [is3D, setIs3D] = useState(false);
   const [toolsExpanded, setToolsExpanded] = useState(false);
   const [showTopography, setShowTopography] = useState(false);
@@ -46,8 +45,6 @@ export default function LeadsMap({ leads = [], onSelectLead }) {
   const [drawMode, setDrawMode] = useState(false);
   const [filterPipeline, setFilterPipeline] = useState('all');
   const [filterStage, setFilterStage] = useState('all');
-  const [filtersExpanded, setFiltersExpanded] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // Initialize map
   useEffect(() => {
@@ -283,186 +280,10 @@ export default function LeadsMap({ leads = [], onSelectLead }) {
     if (source) source.setData({ type: 'FeatureCollection', features: [] });
   };
 
-  // Calculate stats
-  const stats = {
-    newLeads: filteredLeads.filter(l => l.stage === 'New').length,
-    offersOut: filteredLeads.filter(l => l.stage === 'Negotiating').length,
-    contracts: filteredLeads.filter(l => l.stage === 'Under Contract').length,
-    closed: filteredLeads.filter(l => l.stage === 'Closed').length,
-  };
-
-  // Handle clicking a lead in sidebar
-  const handleLeadClick = (lead) => {
-    setSelectedLead(lead);
-    if (onSelectLead) onSelectLead(lead);
-
-    if (map.current && lead.lat && lead.lng) {
-      map.current.flyTo({
-        center: [lead.lng, lead.lat],
-        zoom: 15,
-        duration: 1000,
-      });
-      showParcelBoundary(lead);
-    }
-  };
-
   return (
-    <div className="relative w-full h-full flex">
-      {/* Leads Sidebar */}
-      <div className={`h-full bg-gradient-to-b from-slate-900 to-slate-800 border-r border-slate-700/50 flex flex-col transition-all duration-300 ${sidebarCollapsed ? 'w-0 overflow-hidden' : 'w-72'}`}>
-        {/* Header with stats */}
-        <div className="p-4 border-b border-slate-700/50">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-white font-semibold text-lg">
-              {filteredLeads.length} Active {filteredLeads.length === 1 ? 'Lead' : 'Leads'}
-            </h2>
-            <button
-              onClick={() => setSidebarCollapsed(true)}
-              className="p-1 text-slate-400 hover:text-white transition"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
-              </svg>
-            </button>
-          </div>
-
-          {/* Stats Grid */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-slate-800/50 rounded-lg p-2">
-              <div className="text-slate-400 text-xs uppercase tracking-wide">New Leads</div>
-              <div className="text-white text-xl font-bold">{stats.newLeads}</div>
-            </div>
-            <div className="bg-slate-800/50 rounded-lg p-2">
-              <div className="text-slate-400 text-xs uppercase tracking-wide">Offers Out</div>
-              <div className="text-rust text-xl font-bold">{stats.offersOut}</div>
-            </div>
-            <div className="bg-slate-800/50 rounded-lg p-2">
-              <div className="text-slate-400 text-xs uppercase tracking-wide">Contracts</div>
-              <div className="text-white text-xl font-bold">{stats.contracts}</div>
-            </div>
-            <div className="bg-slate-800/50 rounded-lg p-2">
-              <div className="text-slate-400 text-xs uppercase tracking-wide">Closed</div>
-              <div className="text-green-400 text-xl font-bold">{stats.closed}</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Pipeline Filter Tabs */}
-        <div className="px-4 py-2 border-b border-slate-700/50 overflow-x-auto">
-          <div className="flex gap-1 text-xs">
-            <button
-              onClick={() => setFilterPipeline('all')}
-              className={`px-3 py-1.5 rounded whitespace-nowrap transition ${
-                filterPipeline === 'all' ? 'bg-rust text-white' : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
-              }`}
-            >
-              All Deals
-            </button>
-            {Object.entries(PIPELINE_NAMES).map(([key, name]) => (
-              <button
-                key={key}
-                onClick={() => setFilterPipeline(key)}
-                className={`px-3 py-1.5 rounded whitespace-nowrap transition ${
-                  filterPipeline === key ? 'bg-rust text-white' : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
-                }`}
-              >
-                {name.split(' ')[0]}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Leads List */}
-        <div className="flex-1 overflow-y-auto p-3 space-y-2">
-          {filteredLeads.length === 0 ? (
-            <div className="text-center py-8 text-slate-400">
-              <svg className="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l5.447 2.724A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-              </svg>
-              <p className="text-sm">No leads found</p>
-            </div>
-          ) : (
-            filteredLeads.map(lead => (
-              <div
-                key={lead.id}
-                onClick={() => handleLeadClick(lead)}
-                onMouseEnter={() => setHoveredLead(lead.id)}
-                onMouseLeave={() => setHoveredLead(null)}
-                className={`bg-slate-800/50 rounded-lg overflow-hidden cursor-pointer transition border ${
-                  selectedLead?.id === lead.id
-                    ? 'border-rust ring-1 ring-rust'
-                    : hoveredLead === lead.id
-                      ? 'border-slate-600'
-                      : 'border-transparent hover:border-slate-600'
-                }`}
-              >
-                <div className="flex gap-3 p-2">
-                  {/* Satellite Thumbnail */}
-                  <div className="w-20 h-14 rounded overflow-hidden flex-shrink-0 bg-slate-700">
-                    {lead.lat && lead.lng ? (
-                      <img
-                        src={getSatelliteThumbnail(lead.lat, lead.lng)}
-                        alt=""
-                        className="w-full h-full object-cover"
-                        onError={(e) => e.target.style.display = 'none'}
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-slate-500">
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                        </svg>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Lead Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="text-white font-medium text-sm truncate">
-                      {lead.name || 'Unknown Owner'}
-                    </div>
-                    <div className="flex items-center gap-1 text-xs text-slate-400 mt-0.5">
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                      </svg>
-                      {lead.county ? `${lead.county} County, ${lead.state}` : `${lead.city || ''}, ${lead.state || ''}`}
-                    </div>
-                    <div className="flex items-center gap-3 mt-1.5">
-                      {lead.acreage > 0 && (
-                        <div className="flex items-center gap-1">
-                          <span className="text-[10px] text-slate-500 uppercase">Acres</span>
-                          <span className="text-xs text-rust font-semibold">{lead.acreage}</span>
-                        </div>
-                      )}
-                      <div className="flex items-center gap-1">
-                        <span
-                          className="w-1.5 h-1.5 rounded-full"
-                          style={{ backgroundColor: PIPELINE_COLORS[lead.pipeline] || '#666' }}
-                        />
-                        <span className="text-[10px] text-slate-400">{lead.stage}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-
-      {/* Sidebar Toggle (when collapsed) */}
-      {sidebarCollapsed && (
-        <button
-          onClick={() => setSidebarCollapsed(false)}
-          className="absolute left-2 top-4 z-20 p-2 bg-slate-900/90 hover:bg-slate-800 text-white rounded-lg border border-slate-700/50 transition"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
-          </svg>
-        </button>
-      )}
-
+    <div className="relative w-full h-full">
       {/* Map Container */}
-      <div className="flex-1 relative">
+      <div className="w-full h-full relative">
         <div ref={mapContainer} className="w-full h-full" />
 
         {/* 3D Toggle */}
