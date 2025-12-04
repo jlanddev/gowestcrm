@@ -40,6 +40,10 @@ export default function LeadsMap({ leads = [], onSelectLead }) {
   const [is3D, setIs3D] = useState(false);
   const [toolsExpanded, setToolsExpanded] = useState(false);
   const [showTopography, setShowTopography] = useState(false);
+  const [showPower, setShowPower] = useState(false);
+  const [showWetlands, setShowWetlands] = useState(false);
+  const [showInfrastructure, setShowInfrastructure] = useState(false);
+  const [drawMode, setDrawMode] = useState(false);
   const [filterPipeline, setFilterPipeline] = useState('all');
   const [filterStage, setFilterStage] = useState('all');
   const [filtersExpanded, setFiltersExpanded] = useState(false);
@@ -496,20 +500,62 @@ export default function LeadsMap({ leads = [], onSelectLead }) {
 
         {/* Tools Menu */}
         {toolsExpanded && (
-          <div className="absolute top-28 left-4 z-10 flex flex-col gap-2">
-            <button
+          <div className="absolute top-28 left-4 z-10 bg-white/95 rounded-xl shadow-xl border border-gray-200 p-2 min-w-[200px]">
+            <ToolButton
+              active={drawMode}
+              onClick={() => setDrawMode(!drawMode)}
+              icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>}
+              label="Draw Lots"
+            />
+            <ToolButton
+              active={showTopography}
               onClick={toggleTopography}
-              className={`px-4 py-2 rounded-lg font-medium shadow-lg transition-all ${
-                showTopography ? 'bg-rust text-white' : 'bg-white/95 text-gray-700 hover:bg-white border border-gray-200'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
-                </svg>
-                <span>Topography</span>
-              </div>
-            </button>
+              icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" /></svg>}
+              label="Show Topography"
+            />
+            <ToolButton
+              active={showPower}
+              onClick={() => setShowPower(!showPower)}
+              icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>}
+              label="Power"
+            />
+            <ToolButton
+              active={showInfrastructure}
+              onClick={() => setShowInfrastructure(!showInfrastructure)}
+              icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>}
+              label="Infrastructure Districts"
+            />
+            <ToolButton
+              active={false}
+              onClick={() => {}}
+              icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>}
+              label="Lot Absorption"
+              hasDropdown
+            />
+            <ToolButton
+              active={false}
+              onClick={() => {}}
+              icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
+              label="For Sale / Sold Comps"
+            />
+            <ToolButton
+              active={false}
+              onClick={() => {}}
+              icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z" /></svg>}
+              label="Builder Lot Takes"
+            />
+            <ToolButton
+              active={false}
+              onClick={() => {}}
+              icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l5.447 2.724A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" /></svg>}
+              label="Developments Map"
+            />
+            <ToolButton
+              active={showWetlands}
+              onClick={() => setShowWetlands(!showWetlands)}
+              icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" /></svg>}
+              label="Wetlands / Floodplain"
+            />
           </div>
         )}
 
@@ -653,5 +699,26 @@ export default function LeadsMap({ leads = [], onSelectLead }) {
         `}</style>
       </div>
     </div>
+  );
+}
+
+function ToolButton({ active, onClick, icon, label, hasDropdown }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`w-full flex items-center justify-between gap-3 px-3 py-2 rounded-lg text-sm font-medium transition ${
+        active ? 'bg-rust text-white' : 'text-gray-700 hover:bg-gray-100'
+      }`}
+    >
+      <div className="flex items-center gap-3">
+        {icon}
+        <span>{label}</span>
+      </div>
+      {hasDropdown && (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      )}
+    </button>
   );
 }
