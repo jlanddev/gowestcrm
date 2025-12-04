@@ -757,6 +757,28 @@ export default function LeadsMap({ leads = [], onSelectLead, onGoToBackend }) {
               </div>
             )}
 
+            {/* Status Checkboxes */}
+            <div className="py-3 border-t border-slate-600 space-y-2">
+              <div className="flex items-center gap-3">
+                <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${selectedLead.spoke_with ? 'bg-rust border-rust' : 'border-slate-500'}`}>
+                  {selectedLead.spoke_with && <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>}
+                </div>
+                <span className="text-white text-sm">Spoke With</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${selectedLead.site_visit ? 'bg-rust border-rust' : 'border-slate-500'}`}>
+                  {selectedLead.site_visit && <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>}
+                </div>
+                <span className="text-white text-sm">Site Visit</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${selectedLead.proposal_made ? 'bg-rust border-rust' : 'border-slate-500'}`}>
+                  {selectedLead.proposal_made && <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>}
+                </div>
+                <span className="text-white text-sm">Proposal Made</span>
+              </div>
+            </div>
+
             {/* Notes */}
             {selectedLead.notes && (
               <div className="py-2">
