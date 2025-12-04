@@ -406,8 +406,8 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Lead Detail Slide-out */}
-      {selectedLead && (
+      {/* Lead Detail Slide-out - only show when NOT in map view */}
+      {selectedLead && activeView !== 'map' && (
         <LeadDetailPanel
           lead={selectedLead}
           pipelines={PIPELINES}
