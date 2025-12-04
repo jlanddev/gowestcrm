@@ -242,145 +242,115 @@ function SidebarItem({ icon, label, count, active, onClick }) {
 
 function OverviewSection({ leads, tasks, users, user, onTaskUpdate }) {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [dateFilter, setDateFilter] = useState('today');
 
   const today = new Date();
   const todayStr = today.toISOString().split('T')[0];
-
-  // Get tasks based on filter
-  const getFilteredTasks = () => {
-    const now = new Date();
-    now.setHours(0, 0, 0, 0);
-
-    return tasks.filter(task => {
-      const taskDate = new Date(task.due_date);
-      taskDate.setHours(0, 0, 0, 0);
-
-      if (dateFilter === 'today') {
-        return taskDate.getTime() === now.getTime();
-      } else if (dateFilter === 'week') {
-        const weekEnd = new Date(now);
-        weekEnd.setDate(weekEnd.getDate() + 7);
-        return taskDate >= now && taskDate <= weekEnd;
-      } else if (dateFilter === 'month') {
-        const monthEnd = new Date(now);
-        monthEnd.setMonth(monthEnd.getMonth() + 1);
-        return taskDate >= now && taskDate <= monthEnd;
-      }
-      return true;
-    });
-  };
-
-  const filteredTasks = getFilteredTasks();
   const todaysTasks = tasks.filter(t => t.due_date === todayStr);
 
-  // Stats - no rainbow colors
-  const stats = {
-    totalLeads: leads.length,
-    newLeads: leads.filter(l => l.stage === 'New').length,
-    underContract: leads.filter(l => l.stage === 'Under Contract').length,
-    closed: leads.filter(l => l.stage === 'Closed').length,
+  // Calendar helpers
+  const getDaysInMonth = (date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startDayOfWeek = firstDay.getDay();
+    const days = [];
+    for (let i = 0; i < startDayOfWeek; i++) days.push(null);
+    for (let i = 1; i <= daysInMonth; i++) days.push(new Date(year, month, i));
+    return days;
   };
 
+  const getTasksForDate = (date) => {
+    if (!date) return [];
+    const dateStr = date.toISOString().split('T')[0];
+    return tasks.filter(task => task.due_date === dateStr);
+  };
+
+  const formatMonth = (date) => date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  const prevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+  const nextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+  const isToday = (date) => date && date.toDateString() === new Date().toDateString();
+
+  const days = getDaysInMonth(currentDate);
+  const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
   return (
-    <div className="p-6 max-w-6xl">
+    <div className="p-6">
       <h1 className="text-2xl font-semibold text-white mb-6">Overview</h1>
 
-      {/* Stats - Clean, no rainbow */}
-      <div className="grid grid-cols-4 gap-4 mb-8">
-        <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50">
-          <div className="text-3xl font-semibold text-white">{stats.totalLeads}</div>
-          <div className="text-sm text-slate-400">Total Leads</div>
+      <div className="grid grid-cols-3 gap-6">
+        {/* Calendar */}
+        <div className="col-span-2 bg-slate-800/50 rounded-xl border border-slate-700/50">
+          <div className="flex items-center justify-between p-4 border-b border-slate-700/50">
+            <button onClick={prevMonth} className="p-2 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-white transition">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+            </button>
+            <h2 className="text-lg font-medium text-white">{formatMonth(currentDate)}</h2>
+            <button onClick={nextMonth} className="p-2 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-white transition">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+            </button>
+          </div>
+          <div className="p-4">
+            <div className="grid grid-cols-7 gap-1 mb-2">
+              {weekDays.map(day => (
+                <div key={day} className="text-center text-xs text-slate-500 py-2">{day}</div>
+              ))}
+            </div>
+            <div className="grid grid-cols-7 gap-1">
+              {days.map((date, i) => {
+                const dayTasks = getTasksForDate(date);
+                return (
+                  <div
+                    key={i}
+                    className={`min-h-[70px] p-2 rounded-lg ${
+                      date ? 'bg-slate-900/50 hover:bg-slate-700/50 cursor-pointer' : ''
+                    } ${isToday(date) ? 'ring-2 ring-rust' : ''}`}
+                  >
+                    {date && (
+                      <>
+                        <div className={`text-sm ${isToday(date) ? 'text-rust font-bold' : 'text-slate-400'}`}>
+                          {date.getDate()}
+                        </div>
+                        {dayTasks.slice(0, 2).map(task => (
+                          <div key={task.id} className="mt-1 text-xs bg-rust/20 text-rust px-1 py-0.5 rounded truncate">
+                            {task.title}
+                          </div>
+                        ))}
+                        {dayTasks.length > 2 && (
+                          <div className="mt-1 text-xs text-slate-500">+{dayTasks.length - 2}</div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
-        <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50">
-          <div className="text-3xl font-semibold text-white">{stats.newLeads}</div>
-          <div className="text-sm text-slate-400">New Leads</div>
-        </div>
-        <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50">
-          <div className="text-3xl font-semibold text-white">{stats.underContract}</div>
-          <div className="text-sm text-slate-400">Under Contract</div>
-        </div>
-        <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50">
-          <div className="text-3xl font-semibold text-white">{stats.closed}</div>
-          <div className="text-sm text-slate-400">Closed</div>
-        </div>
-      </div>
 
-      <div className="grid grid-cols-2 gap-6">
-        {/* Today's Appointments */}
+        {/* Today's Tasks */}
         <div className="bg-slate-800/50 rounded-xl border border-slate-700/50">
-          <div className="p-4 border-b border-slate-700/50 flex items-center justify-between">
-            <h2 className="text-lg font-medium text-white">Today's Appointments</h2>
-            <span className="text-sm text-slate-400">{today.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</span>
+          <div className="p-4 border-b border-slate-700/50">
+            <h2 className="text-lg font-medium text-white">Today</h2>
+            <p className="text-sm text-slate-400">{today.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</p>
           </div>
           <div className="p-4">
             {todaysTasks.length === 0 ? (
-              <div className="text-center py-8 text-slate-400">
-                <p>No appointments today</p>
+              <div className="text-center py-6 text-slate-400 text-sm">
+                No tasks today
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {todaysTasks.map(task => (
                   <div key={task.id} className="flex items-center gap-3 p-3 bg-slate-900/50 rounded-lg">
-                    <div className="w-2 h-2 bg-rust rounded-full" />
-                    <div className="flex-1">
-                      <div className="text-white font-medium">{task.title}</div>
-                      {task.description && <div className="text-slate-400 text-sm">{task.description}</div>}
-                    </div>
+                    <div className="w-2 h-2 bg-rust rounded-full flex-shrink-0" />
+                    <div className="text-white text-sm truncate">{task.title}</div>
                   </div>
                 ))}
               </div>
             )}
-            <button className="w-full mt-4 px-4 py-2 border border-slate-600 text-slate-300 hover:bg-slate-700 rounded-lg text-sm transition">
-              + Schedule Appointment
-            </button>
-          </div>
-        </div>
-
-        {/* To-Dos & Tasks */}
-        <div className="bg-slate-800/50 rounded-xl border border-slate-700/50">
-          <div className="p-4 border-b border-slate-700/50 flex items-center justify-between">
-            <h2 className="text-lg font-medium text-white">To-Dos & Tasks</h2>
-            <div className="flex gap-1">
-              <button
-                onClick={() => setDateFilter('today')}
-                className={`px-3 py-1 text-xs rounded-lg transition ${dateFilter === 'today' ? 'bg-rust text-white' : 'text-slate-400 hover:text-white'}`}
-              >
-                Today
-              </button>
-              <button
-                onClick={() => setDateFilter('week')}
-                className={`px-3 py-1 text-xs rounded-lg transition ${dateFilter === 'week' ? 'bg-rust text-white' : 'text-slate-400 hover:text-white'}`}
-              >
-                This Week
-              </button>
-              <button
-                onClick={() => setDateFilter('month')}
-                className={`px-3 py-1 text-xs rounded-lg transition ${dateFilter === 'month' ? 'bg-rust text-white' : 'text-slate-400 hover:text-white'}`}
-              >
-                This Month
-              </button>
-            </div>
-          </div>
-          <div className="p-4">
-            {filteredTasks.length === 0 ? (
-              <div className="text-center py-8 text-slate-400">
-                <p>No tasks for this period</p>
-              </div>
-            ) : (
-              <div className="space-y-2 max-h-64 overflow-y-auto">
-                {filteredTasks.map(task => (
-                  <div key={task.id} className="flex items-center gap-3 p-3 bg-slate-900/50 rounded-lg">
-                    <input type="checkbox" className="rounded border-slate-600 bg-slate-800 text-rust" />
-                    <div className="flex-1">
-                      <div className="text-white text-sm">{task.title}</div>
-                      <div className="text-slate-500 text-xs">{new Date(task.due_date).toLocaleDateString()}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-            <button className="w-full mt-4 px-4 py-2 border border-slate-600 text-slate-300 hover:bg-slate-700 rounded-lg text-sm transition">
+            <button className="w-full mt-4 px-4 py-2 bg-rust hover:bg-rust/80 text-white rounded-lg text-sm transition">
               + Add Task
             </button>
           </div>
