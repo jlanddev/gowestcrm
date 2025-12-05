@@ -602,74 +602,79 @@ export default function LeadsMap({ leads = [], onSelectLead, onGoToBackend, onLe
                   selectedLead?.id === lead.id ? 'bg-white/10' : 'hover:bg-white/5'
                 }`}
               >
-                <div className="flex p-4 gap-3">
-                  {/* Lead Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="text-white font-medium">
-                      {lead.name || 'Unknown Owner'}
-                    </div>
-                    {(lead.county || lead.city || lead.address) && (
-                      <div className="text-white/40 text-sm mt-1">
-                        {lead.county ? `${lead.county} County, ${lead.state || 'TX'}` : (lead.city ? `${lead.city}, ${lead.state || 'TX'}` : lead.address)}
+                <div className="p-4">
+                  {/* Top Row: Name + Calendar + Thumbnail */}
+                  <div className="flex items-start gap-3">
+                    {/* Name and County */}
+                    <div className="flex-1 min-w-0">
+                      <div className="text-white font-medium text-base">
+                        {lead.name || 'Unknown Owner'}
                       </div>
-                    )}
-                    <div className="flex items-center gap-2 mt-2">
-                      {lead.acreage > 0 && (
-                        <span className="text-rust text-sm font-medium">{lead.acreage} ac</span>
+                      {(lead.county || lead.city || lead.address) && (
+                        <div className="text-white/50 text-sm">
+                          {lead.county ? `${lead.county} County, ${lead.state || 'TX'}` : (lead.city ? `${lead.city}, ${lead.state || 'TX'}` : lead.address)}
+                        </div>
                       )}
-                      <div className="relative">
-                        <select
-                          value={lead.stage}
-                          onChange={(e) => updateLeadStage(lead.id, e.target.value, e)}
-                          onClick={(e) => e.stopPropagation()}
-                          className="appearance-none bg-gradient-to-r from-slate-700 to-slate-600 text-white text-xs font-medium pl-3 pr-7 py-1.5 rounded-full border border-slate-500/50 shadow-sm cursor-pointer hover:from-slate-600 hover:to-slate-500 transition-all focus:outline-none focus:ring-2 focus:ring-rust/50"
-                        >
-                          {STATUS_OPTIONS.map(status => (
-                            <option key={status} value={status} className="bg-slate-800">{status}</option>
-                          ))}
-                        </select>
-                        <svg className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-white/60 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
-                      </div>
-                      {/* Calendar/Schedule Button */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setShowScheduleModal(lead.id);
-                        }}
-                        className="p-1.5 rounded-full bg-slate-700 hover:bg-rust transition-colors relative"
-                        title="Schedule"
-                      >
-                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                        {/* Red notification badge for upcoming appointments */}
-                        {leadTasks[lead.id] > 0 && (
-                          <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center shadow-md">
-                            {leadTasks[lead.id]}
-                          </span>
-                        )}
-                      </button>
+                    </div>
+
+                    {/* Calendar Button */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowScheduleModal(lead.id);
+                      }}
+                      className="p-2 rounded-lg bg-slate-700/50 hover:bg-rust transition-colors relative flex-shrink-0"
+                      title="Schedule"
+                    >
+                      <svg className="w-4 h-4 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      {leadTasks[lead.id] > 0 && (
+                        <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center shadow-md">
+                          {leadTasks[lead.id]}
+                        </span>
+                      )}
+                    </button>
+
+                    {/* Parcel Thumbnail */}
+                    <div className="w-16 h-12 rounded overflow-hidden flex-shrink-0 bg-slate-900 border border-slate-700">
+                      {lead.lat && lead.lng ? (
+                        <img
+                          src={getSatelliteThumbnail(lead.lat, lead.lng, lead.boundary)}
+                          alt=""
+                          className="w-full h-full object-cover"
+                          onError={(e) => e.target.style.display = 'none'}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <svg className="w-4 h-4 text-white/20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                          </svg>
+                        </div>
+                      )}
                     </div>
                   </div>
 
-                  {/* Parcel Thumbnail with satellite + boundary overlay */}
-                  <div className="w-20 h-14 rounded overflow-hidden flex-shrink-0 bg-slate-900 border border-slate-700">
-                    {lead.lat && lead.lng ? (
-                      <img
-                        src={getSatelliteThumbnail(lead.lat, lead.lng, lead.boundary)}
-                        alt=""
-                        className="w-full h-full object-cover"
-                        onError={(e) => e.target.style.display = 'none'}
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <svg className="w-5 h-5 text-white/20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                        </svg>
-                      </div>
+                  {/* Bottom Row: Acreage + Status */}
+                  <div className="flex items-center gap-3 mt-3">
+                    {lead.acreage > 0 && (
+                      <span className="text-rust font-semibold text-sm">{lead.acreage} ac</span>
                     )}
+                    <div className="relative flex-1">
+                      <select
+                        value={lead.stage}
+                        onChange={(e) => updateLeadStage(lead.id, e.target.value, e)}
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-full appearance-none bg-slate-700/50 text-white text-xs font-medium pl-3 pr-7 py-1.5 rounded-lg border border-slate-600/50 cursor-pointer hover:bg-slate-600/50 transition-all focus:outline-none focus:ring-1 focus:ring-rust/50"
+                      >
+                        {STATUS_OPTIONS.map(status => (
+                          <option key={status} value={status} className="bg-slate-800">{status}</option>
+                        ))}
+                      </select>
+                      <svg className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-white/50 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
                   </div>
                 </div>
               </div>
