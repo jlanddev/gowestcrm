@@ -49,6 +49,7 @@ export default function BackendPage() {
   const [activeUnderwriter, setActiveUnderwriter] = useState('project_underwriters');
   const [selectedLeads, setSelectedLeads] = useState([]);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [selectedTask, setSelectedTask] = useState(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -280,6 +281,76 @@ export default function BackendPage() {
           <AddLeadSection onSave={loadData} />
         )}
       </div>
+
+      {/* Task Detail Modal */}
+      {selectedTask && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={() => setSelectedTask(null)}>
+          <div className="bg-slate-800 rounded-xl border border-slate-700 w-full max-w-md mx-4 shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-4 border-b border-slate-700">
+              <h3 className="text-lg font-semibold text-white">Task Details</h3>
+              <button onClick={() => setSelectedTask(null)} className="text-slate-400 hover:text-white">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-4 space-y-4">
+              <div>
+                <div className="text-xs text-slate-500 uppercase mb-1">Title</div>
+                <div className="text-white font-medium">{selectedTask.title}</div>
+              </div>
+              {selectedTask.description && (
+                <div>
+                  <div className="text-xs text-slate-500 uppercase mb-1">Description</div>
+                  <div className="text-slate-300">{selectedTask.description}</div>
+                </div>
+              )}
+              <div>
+                <div className="text-xs text-slate-500 uppercase mb-1">Due Date</div>
+                <div className="text-slate-300">
+                  {new Date(selectedTask.due_date).toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: 'numeric',
+                    minute: '2-digit'
+                  })}
+                </div>
+              </div>
+              {selectedTask.lead_id && (
+                <div>
+                  <div className="text-xs text-slate-500 uppercase mb-1">Related Lead</div>
+                  <div className="text-rust">
+                    {leads.find(l => l.id === selectedTask.lead_id)?.name || 'Unknown'}
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="p-4 border-t border-slate-700 flex gap-3">
+              <button
+                onClick={() => {
+                  if (confirm('Delete this task?')) {
+                    supabase.from('tasks').delete().eq('id', selectedTask.id).then(() => {
+                      loadData();
+                      setSelectedTask(null);
+                    });
+                  }
+                }}
+                className="flex-1 py-2 bg-red-600/20 hover:bg-red-600/40 text-red-400 rounded-lg text-sm font-medium transition"
+              >
+                Delete
+              </button>
+              <button
+                onClick={() => setSelectedTask(null)}
+                className="flex-1 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm font-medium transition"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -401,7 +472,11 @@ function OverviewSection({ leads, tasks, users, user, onTaskUpdate }) {
                         {date.getDate()}
                       </div>
                       {dayTasks.slice(0, 2).map(task => (
-                        <div key={task.id} className="mt-1 text-xs bg-rust/20 text-rust px-1 py-0.5 rounded truncate">
+                        <div
+                          key={task.id}
+                          onClick={(e) => { e.stopPropagation(); setSelectedTask(task); }}
+                          className="mt-1 text-xs bg-rust/20 text-rust px-1 py-0.5 rounded truncate hover:bg-rust/40 cursor-pointer"
+                        >
                           {task.title}
                         </div>
                       ))}
