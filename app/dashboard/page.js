@@ -311,6 +311,8 @@ export default function Dashboard() {
               pipelines={PIPELINES}
               onGoToBackend={() => router.push('/backend')}
               onLeadUpdate={loadData}
+              users={users}
+              currentUser={user}
             />
           )}
 
