@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { supabase } from '@/lib/supabase';
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
@@ -49,7 +49,6 @@ const getSatelliteThumbnail = (lat, lng, boundary = null) => {
 };
 
 export default function LeadsMap({ leads = [], onSelectLead, onGoToBackend, onLeadUpdate }) {
-  const supabase = createClientComponentClient();
   const mapContainer = useRef(null);
   const map = useRef(null);
   const markersRef = useRef([]);
@@ -70,23 +69,13 @@ export default function LeadsMap({ leads = [], onSelectLead, onGoToBackend, onLe
   // Update lead stage in database
   const updateLeadStage = async (leadId, newStage, e) => {
     e.stopPropagation();
-    try {
-      const { error } = await supabase
-        .from('leads')
-        .update({ stage: newStage })
-        .eq('id', leadId);
+    const { error } = await supabase
+      .from('leads')
+      .update({ stage: newStage })
+      .eq('id', leadId);
 
-      if (error) {
-        console.error('Error updating stage:', error);
-        return;
-      }
-
-      // Refresh data after successful update
-      if (onLeadUpdate) {
-        onLeadUpdate();
-      }
-    } catch (err) {
-      console.error('Error:', err);
+    if (!error && onLeadUpdate) {
+      onLeadUpdate();
     }
   };
 
@@ -745,12 +734,13 @@ export default function LeadsMap({ leads = [], onSelectLead, onGoToBackend, onLe
               <div className="text-white font-medium">{selectedLead.name || 'Unknown'}</div>
             </div>
 
-            {/* Address */}
-            <div className="py-2 border-b border-slate-700/30">
-              <div className="text-slate-400 text-xs mb-1">Property Address</div>
-              <div className="text-white font-medium">{selectedLead.address || 'N/A'}</div>
-              <div className="text-slate-400 text-sm">{selectedLead.city}, {selectedLead.state}</div>
-            </div>
+            {/* Parcel ID */}
+            {selectedLead.parcel_number && (
+              <div className="py-2 border-b border-slate-700/30">
+                <div className="text-slate-400 text-xs mb-1">Parcel ID</div>
+                <div className="text-white font-medium">{selectedLead.parcel_number}</div>
+              </div>
+            )}
 
             {/* County */}
             {selectedLead.county && (
