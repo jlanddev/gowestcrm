@@ -117,20 +117,28 @@ export default function LeadsMap({ leads = [], onSelectLead, onGoToBackend, onLe
     if (!scheduleDate || !showScheduleModal) return;
 
     const lead = leads.find(l => l.id === showScheduleModal);
+    const assignee = scheduleAssignee || currentUser?.id || null;
+
     const taskData = {
       title: `${scheduleType === 'call' ? 'Call' : scheduleType === 'site_visit' ? 'Site Visit' : 'Task'}: ${lead?.name || 'Lead'}`,
       description: scheduleDescription || `${scheduleType} for ${lead?.name}`,
       due_date: `${scheduleDate}${scheduleTime ? 'T' + scheduleTime : 'T09:00'}:00`,
-      assigned_to: scheduleAssignee || currentUser?.id,
       lead_id: showScheduleModal,
       status: 'pending',
-      task_type: scheduleType,
       created_at: new Date().toISOString()
     };
 
+    // Only add assigned_to if we have a valid value
+    if (assignee) {
+      taskData.assigned_to = assignee;
+    }
+
     const { error } = await supabase.from('tasks').insert([taskData]);
 
-    if (!error) {
+    if (error) {
+      console.error('Error scheduling task:', error);
+      alert('Error scheduling: ' + error.message);
+    } else {
       // Update local task count immediately
       setLeadTasks(prev => ({
         ...prev,
