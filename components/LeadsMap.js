@@ -81,8 +81,7 @@ export default function LeadsMap({ leads = [], onSelectLead, onGoToBackend, onLe
       const { data, error } = await supabase
         .from('tasks')
         .select('lead_id')
-        .gte('due_date', today)
-        .eq('status', 'pending');
+        .gte('due_date', today);
 
       if (!error && data) {
         const counts = {};
@@ -124,7 +123,6 @@ export default function LeadsMap({ leads = [], onSelectLead, onGoToBackend, onLe
       description: scheduleDescription || `${scheduleType} for ${lead?.name}`,
       due_date: `${scheduleDate}${scheduleTime ? 'T' + scheduleTime : 'T09:00'}:00`,
       lead_id: showScheduleModal,
-      status: 'pending',
       created_at: new Date().toISOString()
     };
 
